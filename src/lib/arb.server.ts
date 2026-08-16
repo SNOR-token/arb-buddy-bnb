@@ -93,13 +93,20 @@ export interface QuoteSnapshot {
 
 export async function fetchQuotes(): Promise<QuoteSnapshot> {
   const pc = client();
+  type MulticallContract = {
+    address: `0x${string}`;
+    abi: readonly unknown[];
+    functionName: string;
+    args: readonly unknown[];
+  };
   const calls: {
     pairId: string;
     dex: DexId;
     decimalsOut: number;
     size: number;
-    contract: Parameters<typeof pc.multicall>[0]["contracts"][number];
+    contract: MulticallContract;
   }[] = [];
+
 
   for (const pair of PAIRS) {
     const base = TOKENS[pair.base];
