@@ -1,8 +1,23 @@
-import { createPublicClient, http, parseAbi, parseUnits, formatUnits, decodeEventLog } from "viem";
+import {
+  createPublicClient,
+  http,
+  fallback,
+  parseAbi,
+  parseUnits,
+  formatUnits,
+  decodeEventLog,
+} from "viem";
 import { bsc } from "viem/chains";
 import { DEX_LIST, PAIRS, TOKENS, type DexId } from "./chain";
 
-function rpcUrl() {
+/** Public BSC endpoints that support eth_getLogs, used until a private RPC is set. */
+const PUBLIC_FALLBACKS = [
+  "https://bsc-rpc.publicnode.com",
+  "https://bsc-dataseed.bnbchain.org",
+  "https://bsc-dataseed1.defibit.io",
+];
+
+function privateRpcUrl() {
   const explicit =
     process.env["QUICKNODE_BSC_URL"] ??
     process.env["QUICKNODE_HTTP_URL"] ??
@@ -11,24 +26,25 @@ function rpcUrl() {
   const token = process.env["QUICKNODE_TOKEN"];
   const host = process.env["QUICKNODE_HOST"];
   if (token && host) return `https://${host}/${token}/`;
-  return "https://bsc-dataseed.bnbchain.org";
+  return null;
 }
 
 export function usingPrivateRpc() {
-  return Boolean(
-    process.env["QUICKNODE_BSC_URL"] ??
-      process.env["QUICKNODE_HTTP_URL"] ??
-      process.env["BSC_RPC_URL"] ??
-      (process.env["QUICKNODE_TOKEN"] && process.env["QUICKNODE_HOST"]),
-  );
+  return privateRpcUrl() !== null;
 }
 
 export function client() {
+  const priv = privateRpcUrl();
+  const urls = priv ? [priv, ...PUBLIC_FALLBACKS] : PUBLIC_FALLBACKS;
   return createPublicClient({
     chain: bsc,
-    transport: http(rpcUrl(), { batch: true, timeout: 15_000 }),
+    transport: fallback(
+      urls.map((url) => http(url, { batch: true, timeout: 12_000 })),
+      { rank: false, retryCount: 1 },
+    ),
   });
 }
+
 
 const V2_ABI = parseAbi([
   "function getAmountsOut(uint256 amountIn, address[] path) view returns (uint256[] amounts)",
