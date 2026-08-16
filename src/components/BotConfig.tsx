@@ -6,13 +6,8 @@ import { Link } from "@tanstack/react-router";
 import { AAVE_V3_POOL } from "@/lib/chain";
 import { ExternalLink } from "lucide-react";
 
-export interface BotSettings {
-  contract: string;
-  loanAmount: number;
-  minProfit: number;
-  autoMode: boolean;
-  minSizePct: number;
-}
+export type { BotSettings } from "@/hooks/useBotSettings";
+import type { BotSettings } from "@/hooks/useBotSettings";
 
 interface Props {
   settings: BotSettings;

@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Activity, Fuel, Blocks, TriangleAlert } from "lucide-react";
+import { Activity, Fuel, Blocks, TriangleAlert, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 import { getQuotes } from "@/lib/arb.functions";
 import { computeOpportunities, fmt, sanitizeQuotes, type Opportunity } from "@/lib/arb-math";
@@ -14,7 +15,8 @@ import { PriceMatrix } from "@/components/PriceMatrix";
 import { OpportunityBoard } from "@/components/OpportunityBoard";
 import { SwapFeedPanel } from "@/components/SwapFeedPanel";
 import { PnlPanel } from "@/components/PnlPanel";
-import { BotConfig, type BotSettings } from "@/components/BotConfig";
+import { BotConfig } from "@/components/BotConfig";
+import { useBotSettings } from "@/hooks/useBotSettings";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -38,40 +40,12 @@ export const Route = createFileRoute("/")({
   component: Dashboard,
 });
 
-const DEFAULTS: BotSettings = {
-  contract: "",
-  loanAmount: 5000,
-  minProfit: 1,
-  autoMode: false,
-  minSizePct: 25,
-};
-
 function Dashboard() {
-  const [settings, setSettings] = useState<BotSettings>(DEFAULTS);
+  const { settings, update } = useBotSettings();
   const [executing, setExecuting] = useState<string | null>(null);
   const { address, onBsc } = useWallet();
   const { trades, addTrade, clear, realized, winRate } = useTrades();
   const lastAuto = useRef(0);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("bnb-arb-settings");
-      if (raw) setSettings({ ...DEFAULTS, ...(JSON.parse(raw) as Partial<BotSettings>) });
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const update = (next: Partial<BotSettings>) =>
-    setSettings((prev) => {
-      const merged = { ...prev, ...next };
-      try {
-        localStorage.setItem("bnb-arb-settings", JSON.stringify(merged));
-      } catch {
-        /* ignore */
-      }
-      return merged;
-    });
 
   const snapshot = useQuery({
     queryKey: ["quotes"],
@@ -164,7 +138,14 @@ function Dashboard() {
             BNB Chain mainnet · PancakeSwap V2 · Uniswap V3 · SushiSwap · Aave V3 flashloans
           </p>
         </div>
-        <WalletButton />
+        <div className="flex items-center gap-2">
+          <Link to="/agent">
+            <Button variant="secondary" className="h-8 gap-1.5 text-[11px]">
+              <Sparkles className="size-3 text-primary" /> AI agent
+            </Button>
+          </Link>
+          <WalletButton />
+        </div>
       </header>
 
       <div className="tabular mt-4 flex flex-wrap gap-2 text-[11px]">

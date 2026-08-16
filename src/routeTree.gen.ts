@@ -14,6 +14,7 @@ import { Route as AgentRouteImport } from './routes/agent'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContractRouteImport } from './routes/contract'
 import { Route as AgentIndexRouteImport } from './routes/agent.index'
+import { Route as AgentThreadIdRouteImport } from './routes/agent.$threadId'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 
 const IndexRoute = IndexRouteImport.update({
@@ -41,6 +42,11 @@ const AgentIndexRoute = AgentIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AgentRoute,
 } as any)
+const AgentThreadIdRoute = AgentThreadIdRouteImport.update({
+  id: '/$threadId',
+  path: '/$threadId',
+  getParentRoute: () => AgentRoute,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/agent': typeof AgentRouteWithChildren
   '/auth': typeof AuthRoute
   '/contract': typeof ContractRoute
+  '/agent/$threadId': typeof AgentThreadIdRoute
   '/api/chat': typeof ApiChatRoute
   '/agent/': typeof AgentIndexRoute
 }
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/contract': typeof ContractRoute
+  '/agent/$threadId': typeof AgentThreadIdRoute
   '/api/chat': typeof ApiChatRoute
   '/agent': typeof AgentIndexRoute
 }
@@ -68,20 +76,29 @@ export interface FileRoutesById {
   '/agent': typeof AgentRouteWithChildren
   '/auth': typeof AuthRoute
   '/contract': typeof ContractRoute
+  '/agent/$threadId': typeof AgentThreadIdRoute
   '/api/chat': typeof ApiChatRoute
   '/agent/': typeof AgentIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/agent' | '/auth' | '/contract' | '/api/chat' | '/agent/'
+  fullPaths:
+    | '/'
+    | '/agent'
+    | '/auth'
+    | '/contract'
+    | '/agent/$threadId'
+    | '/api/chat'
+    | '/agent/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/contract' | '/api/chat' | '/agent'
+  to: '/' | '/auth' | '/contract' | '/agent/$threadId' | '/api/chat' | '/agent'
   id:
     | '__root__'
     | '/'
     | '/agent'
     | '/auth'
     | '/contract'
+    | '/agent/$threadId'
     | '/api/chat'
     | '/agent/'
   fileRoutesById: FileRoutesById
@@ -131,6 +148,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentIndexRouteImport
       parentRoute: typeof AgentRoute
     }
+    '/agent/$threadId': {
+      id: '/agent/$threadId'
+      path: '/$threadId'
+      fullPath: '/agent/$threadId'
+      preLoaderRoute: typeof AgentThreadIdRouteImport
+      parentRoute: typeof AgentRoute
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -142,10 +166,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AgentRouteChildren {
+  AgentThreadIdRoute: typeof AgentThreadIdRoute
   AgentIndexRoute: typeof AgentIndexRoute
 }
 
 const AgentRouteChildren: AgentRouteChildren = {
+  AgentThreadIdRoute: AgentThreadIdRoute,
   AgentIndexRoute: AgentIndexRoute,
 }
 
