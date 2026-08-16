@@ -49,11 +49,13 @@ export function sanitizeQuotes(quotes: Quote[], tolerancePct = 4): Quote[] {
       .filter((p): p is number => !!p && p > 0)
       .sort((a, b) => a - b);
     if (prices.length === 0) return rows;
-    const median = prices[Math.floor(prices.length / 2)]!;
+    // Best execution = highest output for the same input, so the deepest pool
+    // sets the reference. Anything far below it is an illiquid pool.
+    const reference = prices[prices.length - 1]!;
     return rows.map((q) => {
       if (!q.price || q.price <= 0) return { ...q, price: null };
-      const deviation = Math.abs(q.price - median) / median;
-      return deviation * 100 > tolerancePct ? { ...q, price: null, amountOut: null } : q;
+      const shortfall = ((reference - q.price) / reference) * 100;
+      return shortfall > tolerancePct ? { ...q, price: null, amountOut: null } : q;
     });
   });
 }
