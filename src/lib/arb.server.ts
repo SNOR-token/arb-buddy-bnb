@@ -8,7 +8,7 @@ import {
   decodeEventLog,
 } from "viem";
 import { bsc } from "viem/chains";
-import { DEX_LIST, PAIRS, TOKENS, type DexId } from "./chain";
+import { DEX_LIST, PAIRS, WATCHED_PAIRS, TOKENS, type DexId } from "./chain";
 
 /** Public BSC endpoints that support eth_getLogs, used until a private RPC is set. */
 const PUBLIC_FALLBACKS = [
@@ -236,7 +236,7 @@ export async function fetchLargeSwaps(lookbackBlocks: number, minQuote: number) 
   const fromBlock = head - BigInt(Math.max(1, Math.min(lookbackBlocks, 900)));
 
   const perPair = await Promise.all(
-    PAIRS.map(async (pair) => {
+    WATCHED_PAIRS.map(async (pair) => {
       try {
         const logs = await pc.getLogs({
           address: pair.watchPool,

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { decodeEventLog, formatUnits, keccak256, toHex } from "viem";
-import { PAIRS, TOKENS } from "@/lib/chain";
+import { WATCHED_PAIRS, TOKENS } from "@/lib/chain";
 
 export const SWAP_TOPIC = keccak256(
   toHex("Swap(address,uint256,uint256,uint256,uint256,address)"),
@@ -83,7 +83,7 @@ export function useSwapStream(wssUrl: string, enabled: boolean) {
           method: "eth_subscribe",
           params: [
             "logs",
-            { address: PAIRS.map((p) => p.watchPool), topics: [SWAP_TOPIC] },
+            { address: WATCHED_PAIRS.map((p) => p.watchPool), topics: [SWAP_TOPIC] },
           ],
         }),
       );
@@ -97,7 +97,7 @@ export function useSwapStream(wssUrl: string, enabled: boolean) {
         };
         const log = msg.params?.result;
         if (msg.method !== "eth_subscription" || !log) return;
-        const pair = PAIRS.find((p) => p.watchPool.toLowerCase() === log.address.toLowerCase());
+        const pair = WATCHED_PAIRS.find((p) => p.watchPool.toLowerCase() === log.address.toLowerCase());
         if (!pair) return;
 
         const decoded = decodeEventLog({ abi: SWAP_ABI, data: log.data, topics: log.topics });

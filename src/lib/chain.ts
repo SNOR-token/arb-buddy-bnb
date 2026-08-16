@@ -1,9 +1,27 @@
 // Client-safe BSC mainnet constants shared by UI and server functions.
+import { getCreate2Address, keccak256, encodePacked } from "viem";
 
 export const BSC_CHAIN_ID = 56;
 export const BSC_CHAIN_ID_HEX = "0x38";
 
-export type TokenSymbol = "WBNB" | "USDT" | "USDC" | "BUSD" | "CAKE" | "ETH" | "BTCB";
+export type TokenSymbol =
+  | "WBNB"
+  | "USDT"
+  | "USDC"
+  | "BUSD"
+  | "CAKE"
+  | "ETH"
+  | "BTCB"
+  | "XRP"
+  | "ADA"
+  | "DOT"
+  | "LINK"
+  | "LTC"
+  | "DOGE"
+  | "UNI"
+  | "AAVE"
+  | "XVS"
+  | "TWT";
 
 export interface Token {
   symbol: TokenSymbol;
@@ -19,7 +37,18 @@ export const TOKENS: Record<TokenSymbol, Token> = {
   CAKE: { symbol: "CAKE", address: "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82", decimals: 18 },
   ETH: { symbol: "ETH", address: "0x2170Ed0880ac9A755fd29B2688956BD959F933F8", decimals: 18 },
   BTCB: { symbol: "BTCB", address: "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c", decimals: 18 },
+  XRP: { symbol: "XRP", address: "0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE", decimals: 18 },
+  ADA: { symbol: "ADA", address: "0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47", decimals: 18 },
+  DOT: { symbol: "DOT", address: "0x7083609fCE4d1d8Dc0C979AAb8c869Ea2C873402", decimals: 18 },
+  LINK: { symbol: "LINK", address: "0xF8A0BF9cF54Bb92F17374d9e9A321E6a111a51bD", decimals: 18 },
+  LTC: { symbol: "LTC", address: "0x4338665CBB7B2485A8855A139b75D5e34AB0DB94", decimals: 18 },
+  DOGE: { symbol: "DOGE", address: "0xbA2aE424d960c26247Dd6c32edC70B295c744C43", decimals: 8 },
+  UNI: { symbol: "UNI", address: "0xBf5140A22578168FD562DCcF235E5D43A02ce9B1", decimals: 18 },
+  AAVE: { symbol: "AAVE", address: "0xfb6115445Bff7b52FeB98650C87f44907E58f802", decimals: 18 },
+  XVS: { symbol: "XVS", address: "0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63", decimals: 18 },
+  TWT: { symbol: "TWT", address: "0x4B0F1812e5Df2A09796481Ff14017e6005508003", decimals: 18 },
 };
+
 
 export type DexId = "pancake" | "uniswap" | "sushi";
 
@@ -70,45 +99,62 @@ export interface Pair {
   size: number;
   /** PancakeSwap V2 pool watched over websocket for large swaps */
   watchPool: `0x${string}`;
+  /** include in the whale-swap watch list (kept small to stay under RPC limits) */
+  watch: boolean;
+}
+
+/** PancakeSwap V2 factory + init code hash, for deterministic pool addresses. */
+const PANCAKE_V2_FACTORY = "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73" as const;
+const PANCAKE_V2_INIT_CODE_HASH =
+  "0x00fb7f630766e6a796048ea87d01acd3068e8ff67d078148a3fa3f4a84f69bd3" as const;
+
+export function pancakeV2Pool(a: TokenSymbol, b: TokenSymbol): `0x${string}` {
+  const x = TOKENS[a].address.toLowerCase() as `0x${string}`;
+  const y = TOKENS[b].address.toLowerCase() as `0x${string}`;
+  const [token0, token1] = x < y ? [x, y] : [y, x];
+  return getCreate2Address({
+    from: PANCAKE_V2_FACTORY,
+    bytecodeHash: PANCAKE_V2_INIT_CODE_HASH,
+    salt: keccak256(encodePacked(["address", "address"], [token0!, token1!])),
+  });
+}
+
+function pair(
+  base: TokenSymbol,
+  quote: TokenSymbol,
+  size: number,
+  watch = false,
+): Pair {
+  return {
+    id: `${base}/${quote}`,
+    base,
+    quote,
+    size,
+    watchPool: pancakeV2Pool(base, quote),
+    watch,
+  };
 }
 
 export const PAIRS: Pair[] = [
-  {
-    id: "WBNB/USDT",
-    base: "WBNB",
-    quote: "USDT",
-    size: 5,
-    watchPool: "0x16b9a82891338f9bA80E2D6970FddA79D1eb0daE",
-  },
-  {
-    id: "CAKE/WBNB",
-    base: "CAKE",
-    quote: "WBNB",
-    size: 500,
-    watchPool: "0x0eD7e52944161450477ee417DE9Cd3a859b14fD0",
-  },
-  {
-    id: "ETH/WBNB",
-    base: "ETH",
-    quote: "WBNB",
-    size: 2,
-    watchPool: "0x74E4716E431f45807DCF19f284c7aA99F18a4fbc",
-  },
-  {
-    id: "BTCB/WBNB",
-    base: "BTCB",
-    quote: "WBNB",
-    size: 0.2,
-    watchPool: "0x61EB789d75A95CAa3fF50ed7E47b96c132fEc082",
-  },
-  {
-    id: "USDC/USDT",
-    base: "USDC",
-    quote: "USDT",
-    size: 5000,
-    watchPool: "0x4f31Fa1c0c951F5FeA221cd0f9Ba5c6720c9A7ee",
-  },
+  pair("WBNB", "USDT", 5, true),
+  pair("CAKE", "WBNB", 500, true),
+  pair("ETH", "WBNB", 2, true),
+  pair("BTCB", "WBNB", 0.2, true),
+  pair("USDC", "USDT", 5000, true),
+  pair("XRP", "WBNB", 2000, true),
+  pair("ADA", "WBNB", 3000, true),
+  pair("DOT", "WBNB", 300, true),
+  pair("LINK", "WBNB", 150, true),
+  pair("LTC", "WBNB", 20, false),
+  pair("DOGE", "WBNB", 20000, false),
+  pair("UNI", "WBNB", 200, false),
+  pair("AAVE", "WBNB", 15, false),
+  pair("XVS", "WBNB", 300, false),
+  pair("TWT", "WBNB", 2000, false),
 ];
+
+export const WATCHED_PAIRS = PAIRS.filter((p) => p.watch);
+
 
 /** Aave V3 on BNB Chain */
 export const AAVE_V3_POOL = "0x6807dc923806fE8Fd134338EABCA509979a7e0cB" as const;
