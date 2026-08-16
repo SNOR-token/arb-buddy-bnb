@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import type { UIMessage } from "ai";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -84,17 +83,11 @@ export const getThreadMessages = createServerFn({ method: "POST" })
 
     const messages = (rows ?? []).map((row) => ({
       id: row.client_id ?? row.id,
-      role: row.role as UIMessage["role"],
-      parts: (row.parts ?? []) as UIMessage["parts"],
+      role: row.role,
+      parts: row.parts ?? [],
     }));
 
-    return {
-      id: thread.id,
-      title: thread.title,
-      messages: messages as unknown as Array<{
-        id: string;
-        role: string;
-        parts: Array<Record<string, unknown>>;
-      }>,
-    };
+    // Serialized as JSON: UIMessage carries `unknown` metadata that the
+    // server-function serializer refuses to type.
+    return { id: thread.id, title: thread.title, messagesJson: JSON.stringify(messages) };
   });
