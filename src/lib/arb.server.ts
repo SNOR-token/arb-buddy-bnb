@@ -152,7 +152,11 @@ export async function fetchQuotes(): Promise<QuoteSnapshot> {
   }
 
   const [results, blockNumber, gasPrice] = await Promise.all([
-    pc.multicall({ contracts: calls.map((c) => c.contract), allowFailure: true }),
+    pc.multicall({
+      contracts: calls.map((c) => c.contract) as never,
+      allowFailure: true,
+    }),
+
     pc.getBlockNumber(),
     pc.getGasPrice(),
   ]);
