@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgentRouteImport } from './routes/agent'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContractRouteImport } from './routes/contract'
+import { Route as AgentIndexRouteImport } from './routes/agent.index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 
 const IndexRoute = IndexRouteImport.update({
@@ -35,6 +36,11 @@ const ContractRoute = ContractRouteImport.update({
   path: '/contract',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentIndexRoute = AgentIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AgentRoute,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -43,37 +49,46 @@ const ApiChatRoute = ApiChatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/agent': typeof AgentRoute
+  '/agent': typeof AgentRouteWithChildren
   '/auth': typeof AuthRoute
   '/contract': typeof ContractRoute
   '/api/chat': typeof ApiChatRoute
+  '/agent/': typeof AgentIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
   '/contract': typeof ContractRoute
   '/api/chat': typeof ApiChatRoute
+  '/agent': typeof AgentIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/agent': typeof AgentRoute
+  '/agent': typeof AgentRouteWithChildren
   '/auth': typeof AuthRoute
   '/contract': typeof ContractRoute
   '/api/chat': typeof ApiChatRoute
+  '/agent/': typeof AgentIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/agent' | '/auth' | '/contract' | '/api/chat'
+  fullPaths: '/' | '/agent' | '/auth' | '/contract' | '/api/chat' | '/agent/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/agent' | '/auth' | '/contract' | '/api/chat'
-  id: '__root__' | '/' | '/agent' | '/auth' | '/contract' | '/api/chat'
+  to: '/' | '/auth' | '/contract' | '/api/chat' | '/agent'
+  id:
+    | '__root__'
+    | '/'
+    | '/agent'
+    | '/auth'
+    | '/contract'
+    | '/api/chat'
+    | '/agent/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AgentRoute: typeof AgentRoute
+  AgentRoute: typeof AgentRouteWithChildren
   AuthRoute: typeof AuthRoute
   ContractRoute: typeof ContractRoute
   ApiChatRoute: typeof ApiChatRoute
@@ -109,6 +124,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContractRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agent/': {
+      id: '/agent/'
+      path: '/'
+      fullPath: '/agent/'
+      preLoaderRoute: typeof AgentIndexRouteImport
+      parentRoute: typeof AgentRoute
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -119,9 +141,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AgentRouteChildren {
+  AgentIndexRoute: typeof AgentIndexRoute
+}
+
+const AgentRouteChildren: AgentRouteChildren = {
+  AgentIndexRoute: AgentIndexRoute,
+}
+
+const AgentRouteWithChildren = AgentRoute._addFileChildren(AgentRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AgentRoute: AgentRoute,
+  AgentRoute: AgentRouteWithChildren,
   AuthRoute: AuthRoute,
   ContractRoute: ContractRoute,
   ApiChatRoute: ApiChatRoute,
