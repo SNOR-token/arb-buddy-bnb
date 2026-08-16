@@ -145,10 +145,10 @@ export const Route = createFileRoute("/api/chat")({
               }),
               execute: async ({ loanAmount, minProfit, minSizePct, autoMode, reason }) => {
                 const patch: Record<string, number | boolean> = {};
-                if (loanAmount != null) patch.loanAmount = Math.max(1, loanAmount);
-                if (minProfit != null) patch.minProfit = Math.max(0, minProfit);
-                if (minSizePct != null) patch.minSizePct = Math.min(Math.max(minSizePct, 5), 1000);
-                if (autoMode != null) patch.autoMode = autoMode;
+                if (loanAmount != null) patch['loanAmount'] = Math.max(1, loanAmount);
+                if (minProfit != null) patch['minProfit'] = Math.max(0, minProfit);
+                if (minSizePct != null) patch['minSizePct'] = Math.min(Math.max(minSizePct, 5), 1000);
+                if (autoMode != null) patch['autoMode'] = autoMode;
                 return { applied: patch, reason };
               },
             }),

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { decodeEventLog, formatUnits, keccak256, toHex } from "viem";
-import { PAIRS, WATCHED_PAIRS, TOKENS } from "@/lib/chain";
+import { WATCHED_PAIRS, TOKENS } from "@/lib/chain";
 
 export const SWAP_TOPIC = keccak256(
   toHex("Swap(address,uint256,uint256,uint256,uint256,address)"),

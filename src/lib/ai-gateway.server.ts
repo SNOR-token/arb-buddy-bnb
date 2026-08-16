@@ -30,7 +30,7 @@ export function createLovableAiGatewayRunIdFetch(initialRunId?: string) {
 
 export function withLovableAiGatewayRunIdHeader(
   response: Response,
-  holder: { runId?: string },
+  holder: { runId: string | undefined },
 ) {
   if (holder.runId) response.headers.set(RUN_ID_HEADER, holder.runId);
   return response;
