@@ -84,9 +84,9 @@ export function BotConfig({ settings, onChange }: Props) {
           </div>
           <Slider
             value={[settings.minSizePct]}
-            min={25}
-            max={2000}
-            step={25}
+            min={5}
+            max={1000}
+            step={5}
             onValueChange={([v]) => onChange({ minSizePct: v ?? 100 })}
           />
         </div>
