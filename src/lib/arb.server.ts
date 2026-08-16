@@ -8,7 +8,7 @@ import {
   decodeEventLog,
 } from "viem";
 import { bsc } from "viem/chains";
-import { DEX_LIST, PAIRS, TOKENS, type DexId } from "./chain";
+import { DEX_LIST, PAIRS, WATCHED_PAIRS, TOKENS, type DexId } from "./chain";
 
 /** Public BSC endpoints that support eth_getLogs, used until a private RPC is set. */
 const PUBLIC_FALLBACKS = [
