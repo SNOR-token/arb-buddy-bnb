@@ -93,7 +93,7 @@ export function useSwapStream(wssUrl: string, enabled: boolean) {
       try {
         const msg = JSON.parse(String(event.data)) as {
           method?: string;
-          params?: { result?: { address: string; data: `0x${string}`; topics: `0x${string}`[]; transactionHash: string; logIndex: string } };
+          params?: { result?: { address: string; data: `0x${string}`; topics: [`0x${string}`, ...`0x${string}`[]]; transactionHash: string; logIndex: string } };
         };
         const log = msg.params?.result;
         if (msg.method !== "eth_subscription" || !log) return;
