@@ -165,11 +165,15 @@ export async function fetchQuotes(): Promise<QuoteSnapshot> {
     pc.getGasPrice(),
   ]);
 
-  const quotes: Quote[] = results.map((res, i) => {
+  const best = new Map<string, Quote>();
+  results.forEach((res, i) => {
     const meta = calls[i]!;
-    if (res.status !== "success" || res.result == null) {
-      return { pairId: meta.pairId, dex: meta.dex, price: null, amountOut: null };
+    const key = `${meta.pairId}|${meta.dex}`;
+    if (!best.has(key)) {
+      best.set(key, { pairId: meta.pairId, dex: meta.dex, price: null, amountOut: null });
     }
+    if (res.status !== "success" || res.result == null) return;
+
     let raw: bigint | null = null;
     const value = res.result as unknown;
     if (Array.isArray(value)) {
@@ -177,17 +181,19 @@ export async function fetchQuotes(): Promise<QuoteSnapshot> {
       const last = arr[arr.length - 1];
       raw = typeof arr[0] === "bigint" && arr.length === 4 ? (arr[0] as bigint) : (last as bigint);
     }
-    if (raw == null || raw === 0n) {
-      return { pairId: meta.pairId, dex: meta.dex, price: null, amountOut: null };
-    }
+    if (raw == null || raw === 0n) return;
+
     const out = Number(formatUnits(raw, meta.decimalsOut));
-    return {
-      pairId: meta.pairId,
-      dex: meta.dex,
-      price: out / meta.size,
-      amountOut: out.toString(),
-    };
+    const price = out / meta.size;
+    const current = best.get(key)!;
+    // keep the deepest pool / best execution for this venue
+    if (current.price == null || price > current.price) {
+      best.set(key, { pairId: meta.pairId, dex: meta.dex, price, amountOut: out.toString() });
+    }
   });
+
+  const quotes: Quote[] = [...best.values()];
+
 
   return {
     blockNumber: blockNumber.toString(),
