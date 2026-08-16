@@ -43,7 +43,7 @@ const DEFAULTS: BotSettings = {
   loanAmount: 5000,
   minProfit: 1,
   autoMode: false,
-  minSizePct: 300,
+  minSizePct: 100,
 };
 
 function Dashboard() {
