@@ -86,7 +86,15 @@ export const getThreadMessages = createServerFn({ method: "POST" })
       id: row.client_id ?? row.id,
       role: row.role as UIMessage["role"],
       parts: (row.parts ?? []) as UIMessage["parts"],
-    })) as UIMessage[];
+    }));
 
-    return { id: thread.id, title: thread.title, messages };
+    return {
+      id: thread.id,
+      title: thread.title,
+      messages: messages as unknown as Array<{
+        id: string;
+        role: string;
+        parts: Array<Record<string, unknown>>;
+      }>,
+    };
   });
