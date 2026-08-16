@@ -127,27 +127,31 @@ export async function fetchQuotes(): Promise<QuoteSnapshot> {
           },
         });
       } else {
-        calls.push({
-          pairId: pair.id,
-          dex: dex.id,
-          decimalsOut: quote.decimals,
-          size: pair.size,
-          contract: {
-            address: dex.quoter,
-            abi: V3_QUOTER_ABI,
-            functionName: "quoteExactInputSingle",
-            args: [
-              {
-                tokenIn: base.address,
-                tokenOut: quote.address,
-                amountIn,
-                fee: dex.fee ?? 500,
-                sqrtPriceLimitX96: 0n,
-              },
-            ],
-          },
-        });
+        // Probe every fee tier; the deepest pool wins.
+        for (const fee of [100, 500, 2500, 10000]) {
+          calls.push({
+            pairId: pair.id,
+            dex: dex.id,
+            decimalsOut: quote.decimals,
+            size: pair.size,
+            contract: {
+              address: dex.quoter,
+              abi: V3_QUOTER_ABI,
+              functionName: "quoteExactInputSingle",
+              args: [
+                {
+                  tokenIn: base.address,
+                  tokenOut: quote.address,
+                  amountIn,
+                  fee,
+                  sqrtPriceLimitX96: 0n,
+                },
+              ],
+            },
+          });
+        }
       }
+
     }
   }
 
