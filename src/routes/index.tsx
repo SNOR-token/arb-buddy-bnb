@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Activity, Fuel, Blocks, TriangleAlert } from "lucide-react";
 
 import { getQuotes } from "@/lib/arb.functions";
-import { computeOpportunities, fmt, type Opportunity } from "@/lib/arb-math";
+import { computeOpportunities, fmt, sanitizeQuotes, type Opportunity } from "@/lib/arb-math";
 import { executeFlashArb, isAddress } from "@/lib/execute";
 import { useWallet } from "@/hooks/useWallet";
 import { useTrades } from "@/hooks/useTrades";
@@ -79,7 +79,10 @@ function Dashboard() {
     refetchInterval: 6_000,
   });
 
-  const quotes = snapshot.data?.quotes ?? [];
+  const quotes = useMemo(
+    () => sanitizeQuotes(snapshot.data?.quotes ?? []),
+    [snapshot.data?.quotes],
+  );
   const opportunities = useMemo(
     () => computeOpportunities(quotes, snapshot.data?.gasPriceGwei ?? 1),
     [quotes, snapshot.data?.gasPriceGwei],

@@ -36,6 +36,28 @@ export function bnbPrice(quotes: Quote[]) {
   return q?.price ?? 600;
 }
 
+/**
+ * Venues with no real depth for a pair still return a quote, but at an absurd
+ * price. Drop any venue more than `tolerancePct` away from the pair median so
+ * illiquid pools never masquerade as an arbitrage.
+ */
+export function sanitizeQuotes(quotes: Quote[], tolerancePct = 4): Quote[] {
+  return PAIRS.flatMap((pair) => {
+    const rows = quotes.filter((q) => q.pairId === pair.id);
+    const prices = rows
+      .map((q) => q.price)
+      .filter((p): p is number => !!p && p > 0)
+      .sort((a, b) => a - b);
+    if (prices.length === 0) return rows;
+    const median = prices[Math.floor(prices.length / 2)]!;
+    return rows.map((q) => {
+      if (!q.price || q.price <= 0) return { ...q, price: null };
+      const deviation = Math.abs(q.price - median) / median;
+      return deviation * 100 > tolerancePct ? { ...q, price: null, amountOut: null } : q;
+    });
+  });
+}
+
 const DEX_FEE_BPS: Record<DexId, number> = { pancake: 25, uniswap: 5, sushi: 30 };
 
 export function computeOpportunities(
