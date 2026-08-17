@@ -16,7 +16,9 @@ import { OpportunityBoard } from "@/components/OpportunityBoard";
 import { SwapFeedPanel } from "@/components/SwapFeedPanel";
 import { PnlPanel } from "@/components/PnlPanel";
 import { BotConfig } from "@/components/BotConfig";
+import { ExecutorPanel } from "@/components/ExecutorPanel";
 import { useBotSettings } from "@/hooks/useBotSettings";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
