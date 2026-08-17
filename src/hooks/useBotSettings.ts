@@ -26,7 +26,10 @@ export function readSettings(): BotSettings {
   try {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<BotSettings>) };
+    const merged = { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<BotSettings>) };
+    // Migrate older saved configs that predate the deployed executor.
+    if (!merged.contract) merged.contract = EXECUTOR_ADDRESS;
+    return merged;
   } catch {
     return DEFAULT_SETTINGS;
   }
