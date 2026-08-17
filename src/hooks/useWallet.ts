@@ -77,6 +77,41 @@ export function useWallet() {
 
   const disconnect = useCallback(() => setAddress(null), []);
 
+  /**
+   * Guarantees a signer on BNB Chain mainnet, prompting the wallet when needed.
+   * Must be called from a user gesture so the wallet popup is not blocked.
+   */
+  const ensureBsc = useCallback(async () => {
+    const eth = window.ethereum;
+    if (!eth) throw new Error("No injected wallet found. Install MetaMask or Trust Wallet.");
+
+    let accounts = (await eth.request({ method: "eth_accounts" })) as string[];
+    if (!accounts?.[0]) {
+      accounts = (await eth.request({ method: "eth_requestAccounts" })) as string[];
+    }
+    const account = accounts?.[0];
+    if (!account) throw new Error("Wallet connection was rejected.");
+    setAddress(account);
+
+    let current = (await eth.request({ method: "eth_chainId" })) as string;
+    if (current !== BSC_CHAIN_ID_HEX) {
+      try {
+        await eth.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: BSC_CHAIN_ID_HEX }],
+        });
+      } catch {
+        await eth.request({ method: "wallet_addEthereumChain", params: [BSC_PARAMS] });
+      }
+      current = (await eth.request({ method: "eth_chainId" })) as string;
+    }
+    setChainId(current);
+    if (current !== BSC_CHAIN_ID_HEX) {
+      throw new Error("Wallet is not on BNB Chain mainnet (chain 56).");
+    }
+    return { provider: eth, account };
+  }, []);
+
   return {
     address,
     chainId,
@@ -84,6 +119,7 @@ export function useWallet() {
     disconnect,
     connecting,
     available,
+    ensureBsc,
     onBsc: chainId === BSC_CHAIN_ID_HEX,
   };
 }
