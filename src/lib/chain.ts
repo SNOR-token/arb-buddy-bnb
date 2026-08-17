@@ -160,27 +160,37 @@ export const WATCHED_PAIRS = PAIRS.filter((p) => p.watch);
 export const AAVE_V3_POOL = "0x6807dc923806fE8Fd134338EABCA509979a7e0cB" as const;
 export const AAVE_FLASHLOAN_PREMIUM_BPS = 5; // 0.05%
 
+/** Live BnbArbExecutor deployed by the operator on BNB Chain mainnet. */
+export const EXECUTOR_ADDRESS = "0xAbc60F5720FE39d8474F48A1D1072Ed5A798094B" as const;
+
+/** BnbArbExecutor.DexType enum — 0 = UniswapV2-style router, 1 = UniswapV3 router. */
+export const DEX_TYPE = { v2: 0, v3: 1 } as const;
+
+const SWAP_LEG_COMPONENTS = [
+  { name: "dexType", type: "uint8" },
+  { name: "router", type: "address" },
+  { name: "tokenIn", type: "address" },
+  { name: "tokenOut", type: "address" },
+  { name: "poolFee", type: "uint24" },
+  { name: "amountOutMinimum", type: "uint256" },
+  { name: "sqrtPriceLimitX96", type: "uint160" },
+] as const;
+
+/** Exact ABI of the deployed executor (subset used by the terminal). */
 export const FLASH_ARB_ABI = [
   {
     type: "function",
-    name: "executeArb",
+    name: "executeArbitrage",
     stateMutability: "nonpayable",
     inputs: [
-      { name: "asset", type: "address" },
-      { name: "amount", type: "uint256" },
-      { name: "intermediate", type: "address" },
-      { name: "buyRouter", type: "address" },
-      { name: "sellRouter", type: "address" },
-      { name: "minProfit", type: "uint256" },
+      { name: "loanAsset", type: "address" },
+      { name: "loanAmount", type: "uint256" },
+      { name: "firstLeg", type: "tuple", components: SWAP_LEG_COMPONENTS },
+      { name: "secondLeg", type: "tuple", components: SWAP_LEG_COMPONENTS },
+      { name: "minimumProfit", type: "uint256" },
+      { name: "deadline", type: "uint256" },
     ],
-    outputs: [],
-  },
-  {
-    type: "function",
-    name: "withdraw",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "token", type: "address" }],
-    outputs: [],
+    outputs: [{ name: "requestHash", type: "bytes32" }],
   },
   {
     type: "function",
@@ -189,7 +199,89 @@ export const FLASH_ARB_ABI = [
     inputs: [],
     outputs: [{ name: "", type: "address" }],
   },
+  {
+    type: "function",
+    name: "paused",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "BNB_POOL",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "allowedRouters",
+    stateMutability: "view",
+    inputs: [{ name: "", type: "address" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "setRouterAllowed",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "router", type: "address" },
+      { name: "allowed", type: "bool" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "setPaused",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "newPaused", type: "bool" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "withdrawToken",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "token", type: "address" },
+      { name: "recipient", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "withdrawNative",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "recipient", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "error",
+    name: "InsufficientProfit",
+    inputs: [
+      { name: "actualProfit", type: "uint256" },
+      { name: "requiredProfit", type: "uint256" },
+    ],
+  },
+  { type: "error", name: "RouterNotAllowed", inputs: [{ name: "router", type: "address" }] },
+  { type: "error", name: "Paused", inputs: [] },
+  { type: "error", name: "NotOwner", inputs: [] },
+  { type: "error", name: "InvalidRoute", inputs: [] },
+  { type: "error", name: "InvalidAmount", inputs: [] },
+  { type: "error", name: "InvalidDeadline", inputs: [] },
+  {
+    type: "error",
+    name: "ExternalCallFailed",
+    inputs: [
+      { name: "target", type: "address" },
+      { name: "returnData", type: "bytes" },
+    ],
+  },
 ] as const;
+
 
 export function dexLabel(id: DexId) {
   return DEXES[id].label;
