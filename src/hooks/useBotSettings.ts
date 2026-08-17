@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { EXECUTOR_ADDRESS } from "@/lib/chain";
 
 export interface BotSettings {
   contract: string;
@@ -9,12 +10,13 @@ export interface BotSettings {
 }
 
 export const DEFAULT_SETTINGS: BotSettings = {
-  contract: "",
+  contract: EXECUTOR_ADDRESS,
   loanAmount: 5000,
   minProfit: 1,
   autoMode: false,
   minSizePct: 25,
 };
+
 
 const KEY = "bnb-arb-settings";
 const EVENT = "bnb-arb-settings-change";
