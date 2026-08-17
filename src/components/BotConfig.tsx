@@ -20,9 +20,11 @@ export function BotConfig({ settings, onChange }: Props) {
       <div className="border-b border-border px-4 py-3">
         <h2 className="text-sm font-semibold tracking-wide">Bot configuration</h2>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Aave V3 pool <span className="tabular">{AAVE_V3_POOL.slice(0, 10)}…</span> on BNB Chain
+          BnbArbExecutor · <span className="tabular">executeArbitrage()</span> · Aave V3 pool{" "}
+          <span className="tabular">{AAVE_V3_POOL.slice(0, 10)}…</span> on BNB Chain
         </p>
       </div>
+
 
       <div className="space-y-4 px-4 py-4">
         <div className="space-y-1.5">

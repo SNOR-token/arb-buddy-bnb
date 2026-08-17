@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { EXECUTOR_ADDRESS } from "@/lib/chain";
 
 export interface BotSettings {
   contract: string;
@@ -9,12 +10,13 @@ export interface BotSettings {
 }
 
 export const DEFAULT_SETTINGS: BotSettings = {
-  contract: "",
+  contract: EXECUTOR_ADDRESS,
   loanAmount: 5000,
   minProfit: 1,
   autoMode: false,
   minSizePct: 25,
 };
+
 
 const KEY = "bnb-arb-settings";
 const EVENT = "bnb-arb-settings-change";
@@ -24,7 +26,10 @@ export function readSettings(): BotSettings {
   try {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<BotSettings>) };
+    const merged = { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<BotSettings>) };
+    // Migrate older saved configs that predate the deployed executor.
+    if (!merged.contract) merged.contract = EXECUTOR_ADDRESS;
+    return merged;
   } catch {
     return DEFAULT_SETTINGS;
   }

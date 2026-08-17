@@ -16,7 +16,9 @@ import { OpportunityBoard } from "@/components/OpportunityBoard";
 import { SwapFeedPanel } from "@/components/SwapFeedPanel";
 import { PnlPanel } from "@/components/PnlPanel";
 import { BotConfig } from "@/components/BotConfig";
+import { ExecutorPanel } from "@/components/ExecutorPanel";
 import { useBotSettings } from "@/hooks/useBotSettings";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -177,7 +179,9 @@ function Dashboard() {
 
         <div className="space-y-4">
           <BotConfig settings={settings} onChange={update} />
+          <ExecutorPanel contract={settings.contract} address={address} onBsc={onBsc} />
           <PnlPanel trades={trades} realized={realized} winRate={winRate} onClear={clear} />
+
         </div>
       </div>
 
