@@ -179,7 +179,9 @@ function Dashboard() {
 
         <div className="space-y-4">
           <BotConfig settings={settings} onChange={update} />
+          <ExecutorPanel contract={settings.contract} address={address} onBsc={onBsc} />
           <PnlPanel trades={trades} realized={realized} winRate={winRate} onClear={clear} />
+
         </div>
       </div>
 
