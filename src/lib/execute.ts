@@ -110,7 +110,10 @@ export function describeRevert(error: unknown, decimals: number, symbol: string)
   const raw = extractRevertData(error);
   if (raw) {
     try {
-      const decoded = decodeErrorResult({ abi: FLASH_ARB_ABI, data: raw });
+      const decoded = decodeErrorResult({ abi: FLASH_ARB_ABI, data: raw }) as unknown as {
+        errorName: string;
+        args?: readonly unknown[];
+      };
       if (decoded.errorName === "InsufficientProfit") {
         const [actual, required] = decoded.args as unknown as [bigint, bigint];
         return `Not profitable on-chain: ${formatUnits(actual, decimals)} ${symbol} vs required ${formatUnits(required, decimals)} ${symbol}. Lower min profit or wait for a wider spread.`;
