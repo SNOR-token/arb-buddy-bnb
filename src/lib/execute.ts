@@ -84,13 +84,79 @@ export async function executeFlashArb({
     ],
   });
 
+  // Simulate first so reverts surface as readable custom errors instead of a
+  // wallet-level "transaction may fail" warning after the user has signed.
+  let gas: bigint;
+  try {
+    const estimate = (await provider.request({
+      method: "eth_estimateGas",
+      params: [{ from, to: contract, data }],
+    })) as `0x${string}`;
+    gas = (BigInt(estimate) * 125n) / 100n;
+  } catch (error) {
+    throw new Error(describeRevert(error, asset.decimals, pair.quote));
+  }
+
   const txHash = (await provider.request({
     method: "eth_sendTransaction",
-    params: [{ from, to: contract, data }],
+    params: [{ from, to: contract, data, gas: toHex(gas) }],
   })) as string;
 
   return txHash;
 }
+
+/** Turns an RPC revert payload into a human sentence using the executor ABI. */
+export function describeRevert(error: unknown, decimals: number, symbol: string): string {
+  const raw = extractRevertData(error);
+  if (raw) {
+    try {
+      const decoded = decodeErrorResult({ abi: FLASH_ARB_ABI, data: raw });
+      if (decoded.errorName === "InsufficientProfit") {
+        const [actual, required] = decoded.args as unknown as [bigint, bigint];
+        return `Not profitable on-chain: ${formatUnits(actual, decimals)} ${symbol} vs required ${formatUnits(required, decimals)} ${symbol}. Lower min profit or wait for a wider spread.`;
+      }
+      if (decoded.errorName === "RouterNotAllowed") {
+        return "Router is not allowlisted on the executor — allow it in the Executor panel first.";
+      }
+      if (decoded.errorName === "Paused") return "Executor is paused — unpause it to trade.";
+      if (decoded.errorName === "NotOwner") {
+        return "Connected wallet is not the executor owner.";
+      }
+      if (decoded.errorName === "InvalidDeadline") return "Request deadline already passed.";
+      if (decoded.errorName === "InvalidAmount") return "Loan amount is invalid for this asset.";
+      if (decoded.errorName === "InvalidRoute") return "Swap route is invalid for this executor.";
+      if (decoded.errorName === "ExternalCallFailed") {
+        return "A DEX swap call failed (likely insufficient pool liquidity for this size).";
+      }
+      return `Reverted with ${decoded.errorName}.`;
+    } catch {
+      /* fall through to the raw message */
+    }
+  }
+  const message =
+    (error as { message?: string })?.message ?? "Transaction simulation failed on BNB Chain.";
+  return message;
+}
+
+function extractRevertData(error: unknown): `0x${string}` | null {
+  const seen = new Set<unknown>();
+  const walk = (node: unknown): `0x${string}` | null => {
+    if (!node || typeof node !== "object" || seen.has(node)) return null;
+    seen.add(node);
+    const obj = node as Record<string, unknown>;
+    for (const key of ["data", "error", "cause", "originalError"]) {
+      const value = obj[key];
+      if (typeof value === "string" && /^0x[0-9a-fA-F]{8,}$/.test(value)) {
+        return value as `0x${string}`;
+      }
+      const nested = walk(value);
+      if (nested) return nested;
+    }
+    return null;
+  };
+  return walk(error);
+}
+
 
 async function read<T>(
   provider: Eip1193Provider,
