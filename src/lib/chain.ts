@@ -21,7 +21,16 @@ export type TokenSymbol =
   | "UNI"
   | "AAVE"
   | "XVS"
-  | "TWT";
+  | "TWT"
+  | "FDUSD"
+  | "TUSD"
+  | "SOL"
+  | "AVAX"
+  | "FIL"
+  | "INJ"
+  | "TRX"
+  | "POL";
+
 
 export interface Token {
   symbol: TokenSymbol;
@@ -47,10 +56,19 @@ export const TOKENS: Record<TokenSymbol, Token> = {
   AAVE: { symbol: "AAVE", address: "0xfb6115445Bff7b52FeB98650C87f44907E58f802", decimals: 18 },
   XVS: { symbol: "XVS", address: "0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63", decimals: 18 },
   TWT: { symbol: "TWT", address: "0x4B0F1812e5Df2A09796481Ff14017e6005508003", decimals: 18 },
+  FDUSD: { symbol: "FDUSD", address: "0xc5f0f7b66764F6ec8C8Dff7BA683102295E16409", decimals: 18 },
+  TUSD: { symbol: "TUSD", address: "0x40af3827F39D0EAcBF4A168f8D4ee67c121D11c9", decimals: 18 },
+  SOL: { symbol: "SOL", address: "0x570A5D26f7765Ecb712C0924E4De545B89fD43dF", decimals: 18 },
+  AVAX: { symbol: "AVAX", address: "0x1CE0c2827e2eF14D5C4f29a091d735A204794041", decimals: 18 },
+  FIL: { symbol: "FIL", address: "0x0D8Ce2A99Bb6e3B7Db580eD848240e4a0F9aE153", decimals: 18 },
+  INJ: { symbol: "INJ", address: "0xa2B726B1145A4773F68593CF171187d8EBe4d495", decimals: 18 },
+  TRX: { symbol: "TRX", address: "0xCE7de646e7208a4Ef112cb6ed5038FA6cC6b12e3", decimals: 18 },
+  POL: { symbol: "POL", address: "0xCC42724C6683B7E57334c4E856f4c9965ED682bD", decimals: 18 },
 };
 
 
-export type DexId = "pancake" | "uniswap" | "sushi";
+
+export type DexId = "pancake" | "uniswap" | "sushi" | "biswap" | "apeswap";
 
 export interface Dex {
   id: DexId;
@@ -86,6 +104,20 @@ export const DEXES: Record<DexId, Dex> = {
     kind: "v2",
     quoter: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
     router: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
+  },
+  biswap: {
+    id: "biswap",
+    label: "Biswap V2",
+    kind: "v2",
+    quoter: "0x3a6d8cA21D1CF76F653A67577FA0D27453350dD8",
+    router: "0x3a6d8cA21D1CF76F653A67577FA0D27453350dD8",
+  },
+  apeswap: {
+    id: "apeswap",
+    label: "ApeSwap V2",
+    kind: "v2",
+    quoter: "0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7",
+    router: "0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7",
   },
 };
 
@@ -151,6 +183,14 @@ export const PAIRS: Pair[] = [
   pair("AAVE", "WBNB", 15, false),
   pair("XVS", "WBNB", 300, false),
   pair("TWT", "WBNB", 2000, false),
+  pair("FDUSD", "USDT", 5000, true),
+  pair("TUSD", "USDT", 5000, false),
+  pair("SOL", "WBNB", 20, true),
+  pair("AVAX", "WBNB", 50, true),
+  pair("FIL", "WBNB", 200, false),
+  pair("INJ", "WBNB", 100, false),
+  pair("TRX", "WBNB", 5000, false),
+  pair("POL", "WBNB", 2000, false),
 ];
 
 export const WATCHED_PAIRS = PAIRS.filter((p) => p.watch);
