@@ -21,7 +21,16 @@ export type TokenSymbol =
   | "UNI"
   | "AAVE"
   | "XVS"
-  | "TWT";
+  | "TWT"
+  | "FDUSD"
+  | "TUSD"
+  | "SOL"
+  | "AVAX"
+  | "FIL"
+  | "INJ"
+  | "TRX"
+  | "POL";
+
 
 export interface Token {
   symbol: TokenSymbol;
