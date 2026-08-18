@@ -1,4 +1,11 @@
-import { decodeFunctionResult, encodeFunctionData, parseUnits } from "viem";
+import {
+  decodeErrorResult,
+  decodeFunctionResult,
+  encodeFunctionData,
+  formatUnits,
+  parseUnits,
+  toHex,
+} from "viem";
 import { DEXES, DEX_TYPE, FLASH_ARB_ABI, TOKENS, type DexId, type Pair } from "./chain";
 import type { Opportunity } from "./arb-math";
 import type { Eip1193Provider } from "@/hooks/useWallet";
