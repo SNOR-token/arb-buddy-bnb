@@ -183,6 +183,14 @@ export const PAIRS: Pair[] = [
   pair("AAVE", "WBNB", 15, false),
   pair("XVS", "WBNB", 300, false),
   pair("TWT", "WBNB", 2000, false),
+  pair("FDUSD", "USDT", 5000, true),
+  pair("TUSD", "USDT", 5000, false),
+  pair("SOL", "WBNB", 20, true),
+  pair("AVAX", "WBNB", 50, true),
+  pair("FIL", "WBNB", 200, false),
+  pair("INJ", "WBNB", 100, false),
+  pair("TRX", "WBNB", 5000, false),
+  pair("POL", "WBNB", 2000, false),
 ];
 
 export const WATCHED_PAIRS = PAIRS.filter((p) => p.watch);

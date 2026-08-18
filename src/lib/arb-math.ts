@@ -60,7 +60,13 @@ export function sanitizeQuotes(quotes: Quote[], tolerancePct = 4): Quote[] {
   });
 }
 
-const DEX_FEE_BPS: Record<DexId, number> = { pancake: 25, uniswap: 5, sushi: 30 };
+const DEX_FEE_BPS: Record<DexId, number> = {
+  pancake: 25,
+  uniswap: 5,
+  sushi: 30,
+  biswap: 10,
+  apeswap: 20,
+};
 
 export function computeOpportunities(
   quotes: Quote[],
