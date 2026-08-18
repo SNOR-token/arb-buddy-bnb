@@ -105,6 +105,20 @@ export const DEXES: Record<DexId, Dex> = {
     quoter: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
     router: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
   },
+  biswap: {
+    id: "biswap",
+    label: "Biswap V2",
+    kind: "v2",
+    quoter: "0x3a6d8cA21D1CF76F653A67577FA0D27453350dD8",
+    router: "0x3a6d8cA21D1CF76F653A67577FA0D27453350dD8",
+  },
+  apeswap: {
+    id: "apeswap",
+    label: "ApeSwap V2",
+    kind: "v2",
+    quoter: "0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7",
+    router: "0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7",
+  },
 };
 
 export const DEX_LIST = Object.values(DEXES);
