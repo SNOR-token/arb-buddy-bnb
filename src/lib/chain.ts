@@ -68,7 +68,7 @@ export const TOKENS: Record<TokenSymbol, Token> = {
 
 
 
-export type DexId = "pancake" | "uniswap" | "sushi";
+export type DexId = "pancake" | "uniswap" | "sushi" | "biswap" | "apeswap";
 
 export interface Dex {
   id: DexId;
