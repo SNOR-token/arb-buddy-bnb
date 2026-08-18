@@ -22,9 +22,18 @@ interface Props {
   threadId: string;
   initialMessages: UIMessage[];
   onFirstMessage?: (text: string) => void;
+  /** Height utility so the chat can live in a page or a narrow sidebar. */
+  heightClass?: string;
+  compact?: boolean;
 }
 
-export function AgentChat({ threadId, initialMessages, onFirstMessage }: Props) {
+export function AgentChat({
+  threadId,
+  initialMessages,
+  onFirstMessage,
+  heightClass = "h-[calc(100vh-11rem)]",
+  compact = false,
+}: Props) {
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -96,13 +105,15 @@ export function AgentChat({ threadId, initialMessages, onFirstMessage }: Props) 
   };
 
   return (
-    <div className="panel flex h-[calc(100vh-11rem)] flex-col">
+    <div className={cn("panel flex flex-col", heightClass)}>
       <div className="flex items-center gap-2 border-b border-border px-4 py-3">
         <Sparkles className="size-3.5 text-primary" />
         <h2 className="text-sm font-semibold tracking-wide">Arb agent</h2>
-        <span className="text-[11px] text-muted-foreground">
-          live quotes · whale swaps · bot control
-        </span>
+        {!compact && (
+          <span className="text-[11px] text-muted-foreground">
+            live quotes · whale swaps · bot control
+          </span>
+        )}
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
