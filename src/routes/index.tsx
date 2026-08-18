@@ -45,7 +45,7 @@ export const Route = createFileRoute("/")({
 function Dashboard() {
   const { settings, update } = useBotSettings();
   const [executing, setExecuting] = useState<string | null>(null);
-  const { address, onBsc } = useWallet();
+  const { address, onBsc, available, ensureBsc } = useWallet();
   const { trades, addTrade, clear, realized, winRate } = useTrades();
   const lastAuto = useRef(0);
 
@@ -66,7 +66,9 @@ function Dashboard() {
 
   const runArb = async (op: Opportunity, mode: "auto" | "manual") => {
     const quoteSymbol = op.pair.quote;
-    if (!isAddress(settings.contract) || !address || !onBsc) {
+    const canTrade = available && isAddress(settings.contract);
+
+    if (!canTrade) {
       addTrade({
         pairId: op.pairId,
         buyDex: op.buyDex,
@@ -78,9 +80,9 @@ function Dashboard() {
       });
       if (mode === "manual") {
         toast.info("Simulated fill logged", {
-          description: !address
-            ? "Connect a wallet and set your FlashArb contract to trade live."
-            : "Set a valid FlashArb contract address to trade live.",
+          description: !available
+            ? "No injected wallet found — install MetaMask or Trust Wallet to trade live on BNB Chain."
+            : "Set a valid executor contract address to trade live.",
         });
       }
       return;
@@ -88,9 +90,11 @@ function Dashboard() {
 
     setExecuting(op.pairId);
     try {
+      // Prompts the wallet for accounts and forces BNB Chain mainnet (56).
+      const { provider, account } = await ensureBsc();
       const txHash = await executeFlashArb({
-        provider: window.ethereum!,
-        from: address,
+        provider,
+        from: account,
         contract: settings.contract as `0x${string}`,
         opportunity: op,
         loanAmount: settings.loanAmount,
@@ -106,14 +110,21 @@ function Dashboard() {
         txHash,
         quoteSymbol,
       });
-      toast.success("Flashloan arb submitted", { description: txHash.slice(0, 18) + "…" });
+      toast.success("Flashloan arb submitted to BNB Chain", {
+        description: txHash.slice(0, 18) + "…",
+        action: {
+          label: "BscScan",
+          onClick: () => window.open(`https://bscscan.com/tx/${txHash}`, "_blank"),
+        },
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Transaction rejected";
-      toast.error("Arb failed", { description: message.slice(0, 140) });
+      toast.error("Arb not sent", { description: message.slice(0, 200) });
     } finally {
       setExecuting(null);
     }
   };
+
 
   // Auto-fire: whenever the top opportunity clears the profit floor.
   useEffect(() => {
