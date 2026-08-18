@@ -141,22 +141,18 @@ function Dashboard() {
   const gas = snapshot.data?.gasPriceGwei ?? 0;
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-5 sm:px-6">
+    <main className="mx-auto w-full max-w-[1800px] px-4 pb-16 pt-5 sm:px-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-bold tracking-tight sm:text-xl">
             BNB Arb Terminal
           </h1>
           <p className="text-[11px] text-muted-foreground">
-            BNB Chain mainnet · PancakeSwap V2 · Uniswap V3 · SushiSwap · Aave V3 flashloans
+            BNB Chain mainnet · PancakeSwap V2 · Uniswap V3 · SushiSwap · Biswap · ApeSwap · Aave V3
+            flashloans
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/agent">
-            <Button variant="secondary" className="h-8 gap-1.5 text-[11px]">
-              <Sparkles className="size-3 text-primary" /> AI agent
-            </Button>
-          </Link>
           <WalletButton />
         </div>
       </header>
@@ -168,6 +164,7 @@ function Dashboard() {
           icon={<Activity className="size-3 live-dot text-success" />}
           label={snapshot.isFetching ? "refreshing" : "6s refresh"}
         />
+        <Chip icon={<Sparkles className="size-3 text-primary" />} label="AI agent live" />
         {!snapshot.data?.privateRpc && (
           <Chip
             icon={<TriangleAlert className="size-3 text-warning" />}
@@ -176,8 +173,8 @@ function Dashboard() {
         )}
       </div>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
+      <div className="mt-5 grid gap-4 xl:grid-cols-5">
+        <div className="space-y-4 xl:col-span-3">
           <PriceMatrix quotes={quotes} loading={snapshot.isLoading} />
           <OpportunityBoard
             opportunities={opportunities}
@@ -188,13 +185,19 @@ function Dashboard() {
           <SwapFeedPanel minSizePct={settings.minSizePct} />
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 xl:col-span-1">
           <BotConfig settings={settings} onChange={update} />
           <ExecutorPanel contract={settings.contract} address={address} onBsc={onBsc} />
           <PnlPanel trades={trades} realized={realized} winRate={winRate} onClear={clear} />
-
         </div>
+
+        <aside className="xl:col-span-1">
+          <div className="xl:sticky xl:top-4">
+            <AgentSidebar />
+          </div>
+        </aside>
       </div>
+
 
       <footer className="mt-8 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-[11px] leading-relaxed text-foreground">
         <strong>Risk notice.</strong> Quotes are indicative and move every block; net profit
