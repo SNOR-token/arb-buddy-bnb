@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Activity, Fuel, Blocks, TriangleAlert, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 import { getQuotes } from "@/lib/arb.functions";
 import { computeOpportunities, fmt, sanitizeQuotes, type Opportunity } from "@/lib/arb-math";
@@ -17,6 +16,7 @@ import { SwapFeedPanel } from "@/components/SwapFeedPanel";
 import { PnlPanel } from "@/components/PnlPanel";
 import { BotConfig } from "@/components/BotConfig";
 import { ExecutorPanel } from "@/components/ExecutorPanel";
+import { AgentSidebar } from "@/components/AgentSidebar";
 import { useBotSettings } from "@/hooks/useBotSettings";
 
 
