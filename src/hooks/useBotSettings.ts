@@ -12,7 +12,7 @@ export interface BotSettings {
 export const DEFAULT_SETTINGS: BotSettings = {
   contract: EXECUTOR_ADDRESS,
   loanAmount: 5000,
-  minProfit: 1,
+  minProfit: 0,
   autoMode: false,
   minSizePct: 25,
 };
@@ -27,8 +27,9 @@ export function readSettings(): BotSettings {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return DEFAULT_SETTINGS;
     const merged = { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<BotSettings>) };
-    // Migrate older saved configs that predate the deployed executor.
-    if (!merged.contract) merged.contract = EXECUTOR_ADDRESS;
+    // The executor address is hardcoded to the live deployment — ignore stale saves.
+    merged.contract = EXECUTOR_ADDRESS;
+    if (!Number.isFinite(merged.minProfit) || merged.minProfit < 0) merged.minProfit = 0;
     return merged;
   } catch {
     return DEFAULT_SETTINGS;
