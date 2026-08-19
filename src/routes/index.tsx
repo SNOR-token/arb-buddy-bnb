@@ -98,7 +98,7 @@ function Dashboard() {
         contract: settings.contract as `0x${string}`,
         opportunity: op,
         loanAmount: settings.loanAmount,
-        minProfit: settings.minProfit,
+        minProfit: 0,
       });
       addTrade({
         pairId: op.pairId,
