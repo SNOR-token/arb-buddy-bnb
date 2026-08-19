@@ -17,6 +17,7 @@ import { SwapFeedPanel } from "@/components/SwapFeedPanel";
 import { PnlPanel } from "@/components/PnlPanel";
 import { BotConfig } from "@/components/BotConfig";
 import { ExecutorPanel } from "@/components/ExecutorPanel";
+import { AgentSidebar } from "@/components/AgentSidebar";
 import { useBotSettings } from "@/hooks/useBotSettings";
 
 
