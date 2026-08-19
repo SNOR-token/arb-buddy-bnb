@@ -71,7 +71,7 @@ export function SwapFeedPanel({ minSizePct }: { minSizePct: number }) {
         <Input
           value={wssInput}
           onChange={(e) => setWssInput(e.target.value)}
-          placeholder="wss://your-endpoint.bsc.quiknode.pro/TOKEN/"
+          placeholder="wss://rpc.swiftnodes.io/ws/bsc?key=…"
           className="h-8 text-[11px]"
         />
         <Button
