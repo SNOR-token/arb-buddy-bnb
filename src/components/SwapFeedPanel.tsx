@@ -11,14 +11,15 @@ import { cn } from "@/lib/utils";
 import { Radio } from "lucide-react";
 
 export function SwapFeedPanel({ minSizePct }: { minSizePct: number }) {
-  const [wssInput, setWssInput] = useState("");
-  const [wssUrl, setWssUrl] = useState("");
+  const [wssInput, setWssInput] = useState(BSC_WSS_RPC as string);
+  const [wssUrl, setWssUrl] = useState(BSC_WSS_RPC as string);
   const [streamOn, setStreamOn] = useState(true);
 
   useEffect(() => {
+    // SwiftNodes websocket is hardcoded; a saved override still wins if present.
     const saved = readWssUrl();
-    setWssInput(saved);
-    setWssUrl(saved);
+    setWssInput(saved || BSC_WSS_RPC);
+    setWssUrl(saved || BSC_WSS_RPC);
   }, []);
 
   const { status, swaps: streamed } = useSwapStream(wssUrl, streamOn);
