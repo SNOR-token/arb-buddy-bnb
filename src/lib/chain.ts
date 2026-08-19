@@ -201,7 +201,13 @@ export const AAVE_V3_POOL = "0x6807dc923806fE8Fd134338EABCA509979a7e0cB" as cons
 export const AAVE_FLASHLOAN_PREMIUM_BPS = 5; // 0.05%
 
 /** Live BnbArbExecutor deployed by the operator on BNB Chain mainnet. */
-export const EXECUTOR_ADDRESS = "0xAbc60F5720FE39d8474F48A1D1072Ed5A798094B" as const;
+export const EXECUTOR_ADDRESS = "0x501B5A8eFD9071e58EB83970Bcb4F9882E70F0Ff" as const;
+
+/** Hardcoded SwiftNodes BSC endpoints used by both server and browser. */
+export const BSC_HTTP_RPC =
+  "https://rpc.swiftnodes.io/rpc/bsc?key=sn_eFogrGDLjP-c6ntuS5rV7RNlyn380oZ0" as const;
+export const BSC_WSS_RPC =
+  "wss://rpc.swiftnodes.io/ws/bsc?key=sn_eFogrGDLjP-c6ntuS5rV7RNlyn380oZ0" as const;
 
 /** BnbArbExecutor.DexType enum — 0 = UniswapV2-style router, 1 = UniswapV3 router. */
 export const DEX_TYPE = { v2: 0, v3: 1 } as const;
