@@ -37,7 +37,7 @@ export function readSettings(): BotSettings {
 }
 
 export function writeSettings(patch: Partial<BotSettings>): BotSettings {
-  const merged = { ...readSettings(), ...patch };
+  const merged = { ...readSettings(), ...patch, contract: EXECUTOR_ADDRESS, minProfit: 0 };
   try {
     window.localStorage.setItem(KEY, JSON.stringify(merged));
   } catch {
