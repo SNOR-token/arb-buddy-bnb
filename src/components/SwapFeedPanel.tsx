@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { getLargeSwaps } from "@/lib/arb.functions";
 import { readWssUrl, saveWssUrl, useSwapStream, type StreamSwap } from "@/hooks/useSwapStream";
 import { fmt } from "@/lib/arb-math";
+import { BSC_WSS_RPC } from "@/lib/chain";
 import { cn } from "@/lib/utils";
 import { Radio } from "lucide-react";
 
