@@ -41,7 +41,7 @@ export function bnbPrice(quotes: Quote[]) {
  * price. Drop any venue more than `tolerancePct` away from the pair median so
  * illiquid pools never masquerade as an arbitrage.
  */
-export function sanitizeQuotes(quotes: Quote[], tolerancePct = 4): Quote[] {
+export function sanitizeQuotes(quotes: Quote[], tolerancePct = 1.2): Quote[] {
   return PAIRS.flatMap((pair) => {
     const rows = quotes.filter((q) => q.pairId === pair.id);
     const prices = rows
