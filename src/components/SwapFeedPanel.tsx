@@ -7,18 +7,20 @@ import { Label } from "@/components/ui/label";
 import { getLargeSwaps } from "@/lib/arb.functions";
 import { readWssUrl, saveWssUrl, useSwapStream, type StreamSwap } from "@/hooks/useSwapStream";
 import { fmt } from "@/lib/arb-math";
+import { BSC_WSS_RPC } from "@/lib/chain";
 import { cn } from "@/lib/utils";
 import { Radio } from "lucide-react";
 
 export function SwapFeedPanel({ minSizePct }: { minSizePct: number }) {
-  const [wssInput, setWssInput] = useState("");
-  const [wssUrl, setWssUrl] = useState("");
+  const [wssInput, setWssInput] = useState(BSC_WSS_RPC as string);
+  const [wssUrl, setWssUrl] = useState(BSC_WSS_RPC as string);
   const [streamOn, setStreamOn] = useState(true);
 
   useEffect(() => {
+    // SwiftNodes websocket is hardcoded; a saved override still wins if present.
     const saved = readWssUrl();
-    setWssInput(saved);
-    setWssUrl(saved);
+    setWssInput(saved || BSC_WSS_RPC);
+    setWssUrl(saved || BSC_WSS_RPC);
   }, []);
 
   const { status, swaps: streamed } = useSwapStream(wssUrl, streamOn);
@@ -69,7 +71,7 @@ export function SwapFeedPanel({ minSizePct }: { minSizePct: number }) {
         <Input
           value={wssInput}
           onChange={(e) => setWssInput(e.target.value)}
-          placeholder="wss://your-endpoint.bsc.quiknode.pro/TOKEN/"
+          placeholder="wss://rpc.swiftnodes.io/ws/bsc?key=…"
           className="h-8 text-[11px]"
         />
         <Button

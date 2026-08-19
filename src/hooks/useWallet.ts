@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { BSC_CHAIN_ID_HEX } from "@/lib/chain";
+import { BSC_CHAIN_ID_HEX, BSC_HTTP_RPC } from "@/lib/chain";
 
 export interface Eip1193Provider {
   request: (args: { method: string; params?: unknown[] | object }) => Promise<unknown>;
@@ -17,7 +17,7 @@ const BSC_PARAMS = {
   chainId: BSC_CHAIN_ID_HEX,
   chainName: "BNB Smart Chain",
   nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
-  rpcUrls: ["https://bsc-dataseed.bnbchain.org"],
+  rpcUrls: [BSC_HTTP_RPC],
   blockExplorerUrls: ["https://bscscan.com"],
 };
 

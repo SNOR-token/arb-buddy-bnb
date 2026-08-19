@@ -29,14 +29,13 @@ export function BotConfig({ settings, onChange }: Props) {
       <div className="space-y-4 px-4 py-4">
         <div className="space-y-1.5">
           <Label htmlFor="contract" className="text-[11px] uppercase tracking-wider text-muted-foreground">
-            FlashArb contract address
+            FlashArb contract address (hardcoded)
           </Label>
           <Input
             id="contract"
             value={settings.contract}
-            onChange={(e) => onChange({ contract: e.target.value.trim() })}
-            placeholder="0x… your deployed executor"
-            className="tabular h-9 text-xs"
+            readOnly
+            className="tabular h-9 text-xs opacity-80"
           />
           <Link
             to="/contract"
@@ -60,17 +59,12 @@ export function BotConfig({ settings, onChange }: Props) {
           </div>
           <div className="space-y-1.5">
             <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Min profit (quote)
+              Min profit (locked at 0)
             </Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={settings.minProfit}
-              onChange={(e) => onChange({ minProfit: Number(e.target.value) })}
-              className="tabular h-9 text-xs"
-            />
+            <Input type="number" value={0} readOnly className="tabular h-9 text-xs opacity-80" />
           </div>
         </div>
+
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
