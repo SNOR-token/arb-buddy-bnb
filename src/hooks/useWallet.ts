@@ -17,7 +17,7 @@ const BSC_PARAMS = {
   chainId: BSC_CHAIN_ID_HEX,
   chainName: "BNB Smart Chain",
   nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
-  rpcUrls: ["https://bsc-dataseed.bnbchain.org"],
+  rpcUrls: [BSC_HTTP_RPC],
   blockExplorerUrls: ["https://bscscan.com"],
 };
 
