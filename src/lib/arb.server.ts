@@ -83,8 +83,21 @@ export const SWAP_EVENT_ABI = [
 export interface Quote {
   pairId: string;
   dex: DexId;
+  /** quote token per base token, from the sell leg (display price) */
   price: number | null;
   amountOut: string | null;
+  /** base tokens received when spending `loanSize` quote tokens on this venue */
+  buyOut: number | null;
+  /** V3 fee tier that produced `buyOut` (0 for V2 routers) */
+  buyFee: number;
+  /** quote tokens received when selling `refBase` base tokens on this venue */
+  sellOut: number | null;
+  /** V3 fee tier that produced `sellOut` (0 for V2 routers) */
+  sellFee: number;
+  /** base amount used as the reference input for the sell leg */
+  refBase: number;
+  /** flash-loan notional in quote token used for this snapshot */
+  loanSize: number;
 }
 
 export interface QuoteSnapshot {
@@ -95,109 +108,178 @@ export interface QuoteSnapshot {
   quotes: Quote[];
 }
 
-export async function fetchQuotes(): Promise<QuoteSnapshot> {
-  const pc = client();
-  type MulticallContract = {
+interface Call {
+  pairId: string;
+  dex: DexId;
+  fee: number;
+  decimalsOut: number;
+  contract: {
     address: `0x${string}`;
     abi: readonly unknown[];
     functionName: string;
     args: readonly unknown[];
   };
-  const calls: {
-    pairId: string;
-    dex: DexId;
-    decimalsOut: number;
-    size: number;
-    contract: MulticallContract;
-  }[] = [];
+}
 
+const V3_FEE_TIERS = [100, 500, 2500, 10000];
 
+/** Builds one quote call per venue (and per V3 fee tier) for tokenIn -> tokenOut. */
+function legCalls(
+  pairId: string,
+  tokenIn: { address: `0x${string}`; decimals: number },
+  tokenOut: { address: `0x${string}`; decimals: number },
+  amountIn: bigint,
+): Call[] {
+  const calls: Call[] = [];
+  for (const dex of DEX_LIST) {
+    if (dex.kind === "v2") {
+      calls.push({
+        pairId,
+        dex: dex.id,
+        fee: 0,
+        decimalsOut: tokenOut.decimals,
+        contract: {
+          address: dex.quoter,
+          abi: V2_ABI,
+          functionName: "getAmountsOut",
+          args: [amountIn, [tokenIn.address, tokenOut.address]],
+        },
+      });
+    } else {
+      for (const fee of V3_FEE_TIERS) {
+        calls.push({
+          pairId,
+          dex: dex.id,
+          fee,
+          decimalsOut: tokenOut.decimals,
+          contract: {
+            address: dex.quoter,
+            abi: V3_QUOTER_ABI,
+            functionName: "quoteExactInputSingle",
+            args: [
+              {
+                tokenIn: tokenIn.address,
+                tokenOut: tokenOut.address,
+                amountIn,
+                fee,
+                sqrtPriceLimitX96: 0n,
+              },
+            ],
+          },
+        });
+      }
+    }
+  }
+  return calls;
+}
+
+function amountFrom(result: unknown): bigint | null {
+  if (!Array.isArray(result)) return null;
+  const arr = result as unknown[];
+  // V3 quoter returns [amountOut, ...]; V2 getAmountsOut returns [in, ..., out]
+  const raw =
+    typeof arr[0] === "bigint" && arr.length === 4 ? (arr[0] as bigint) : (arr[arr.length - 1] as bigint);
+  return typeof raw === "bigint" && raw > 0n ? raw : null;
+}
+
+/**
+ * Quotes the FULL round trip the executor actually performs:
+ *   1. spend `loanSize` quote tokens to buy the base token on venue A
+ *   2. sell the base token back to the quote token on venue B
+ * Quoting only one direction (the old behaviour) produced phantom spreads that
+ * always reverted on chain, because buying is priced worse than selling.
+ */
+export async function fetchQuotes(loanScale = 1): Promise<QuoteSnapshot> {
+  const pc = client();
+  const scale = Math.min(Math.max(loanScale, 0.05), 25);
+
+  // Round 1 — quote -> base with the real loan notional.
+  const buyCalls: Call[] = [];
+  const loanSizes = new Map<string, number>();
   for (const pair of PAIRS) {
     const base = TOKENS[pair.base];
     const quote = TOKENS[pair.quote];
-    const amountIn = parseUnits(String(pair.size), base.decimals);
-    for (const dex of DEX_LIST) {
-      if (dex.kind === "v2") {
-        calls.push({
-          pairId: pair.id,
-          dex: dex.id,
-          decimalsOut: quote.decimals,
-          size: pair.size,
-          contract: {
-            address: dex.quoter,
-            abi: V2_ABI,
-            functionName: "getAmountsOut",
-            args: [amountIn, [base.address, quote.address]],
-          },
-        });
-      } else {
-        // Probe every fee tier; the deepest pool wins.
-        for (const fee of [100, 500, 2500, 10000]) {
-          calls.push({
-            pairId: pair.id,
-            dex: dex.id,
-            decimalsOut: quote.decimals,
-            size: pair.size,
-            contract: {
-              address: dex.quoter,
-              abi: V3_QUOTER_ABI,
-              functionName: "quoteExactInputSingle",
-              args: [
-                {
-                  tokenIn: base.address,
-                  tokenOut: quote.address,
-                  amountIn,
-                  fee,
-                  sqrtPriceLimitX96: 0n,
-                },
-              ],
-            },
-          });
-        }
-      }
-
-    }
+    const loanSize = pair.loanSize * scale;
+    loanSizes.set(pair.id, loanSize);
+    buyCalls.push(
+      ...legCalls(pair.id, quote, base, parseUnits(loanSize.toFixed(quote.decimals), quote.decimals)),
+    );
   }
 
-  const [results, blockNumber, gasPrice] = await Promise.all([
-    pc.multicall({
-      contracts: calls.map((c) => c.contract) as never,
-      allowFailure: true,
-    }),
+  const buyResults = await pc.multicall({
+    contracts: buyCalls.map((c) => c.contract) as never,
+    allowFailure: true,
+  });
 
+  // best base amount per venue, and the deepest venue's amount as the sell-leg reference
+  const buyBest = new Map<string, { out: number; fee: number }>();
+  const refBase = new Map<string, number>();
+  buyResults.forEach((res, i) => {
+    const meta = buyCalls[i]!;
+    if (res.status !== "success") return;
+    const raw = amountFrom(res.result);
+    if (raw == null) return;
+    const out = Number(formatUnits(raw, meta.decimalsOut));
+    const key = `${meta.pairId}|${meta.dex}`;
+    const current = buyBest.get(key);
+    if (!current || out > current.out) buyBest.set(key, { out, fee: meta.fee });
+    if (out > (refBase.get(meta.pairId) ?? 0)) refBase.set(meta.pairId, out);
+  });
+
+  // Round 2 — base -> quote using each pair's reference base amount.
+  const sellCalls: Call[] = [];
+  for (const pair of PAIRS) {
+    const ref = refBase.get(pair.id);
+    if (!ref || ref <= 0) continue;
+    const base = TOKENS[pair.base];
+    const quote = TOKENS[pair.quote];
+    sellCalls.push(
+      ...legCalls(pair.id, base, quote, parseUnits(ref.toFixed(base.decimals), base.decimals)),
+    );
+  }
+
+  const [sellResults, blockNumber, gasPrice] = await Promise.all([
+    sellCalls.length
+      ? pc.multicall({ contracts: sellCalls.map((c) => c.contract) as never, allowFailure: true })
+      : Promise.resolve([] as { status: string; result?: unknown }[]),
     pc.getBlockNumber(),
     pc.getGasPrice(),
   ]);
 
-  const best = new Map<string, Quote>();
-  results.forEach((res, i) => {
-    const meta = calls[i]!;
-    const key = `${meta.pairId}|${meta.dex}`;
-    if (!best.has(key)) {
-      best.set(key, { pairId: meta.pairId, dex: meta.dex, price: null, amountOut: null });
-    }
-    if (res.status !== "success" || res.result == null) return;
-
-    let raw: bigint | null = null;
-    const value = res.result as unknown;
-    if (Array.isArray(value)) {
-      const arr = value as unknown[];
-      const last = arr[arr.length - 1];
-      raw = typeof arr[0] === "bigint" && arr.length === 4 ? (arr[0] as bigint) : (last as bigint);
-    }
-    if (raw == null || raw === 0n) return;
-
+  const sellBest = new Map<string, { out: number; fee: number }>();
+  sellResults.forEach((res, i) => {
+    const meta = sellCalls[i]!;
+    if (res.status !== "success") return;
+    const raw = amountFrom(res.result);
+    if (raw == null) return;
     const out = Number(formatUnits(raw, meta.decimalsOut));
-    const price = out / meta.size;
-    const current = best.get(key)!;
-    // keep the deepest pool / best execution for this venue
-    if (current.price == null || price > current.price) {
-      best.set(key, { pairId: meta.pairId, dex: meta.dex, price, amountOut: out.toString() });
-    }
+    const key = `${meta.pairId}|${meta.dex}`;
+    const current = sellBest.get(key);
+    if (!current || out > current.out) sellBest.set(key, { out, fee: meta.fee });
   });
 
-  const quotes: Quote[] = [...best.values()];
-
+  const quotes: Quote[] = [];
+  for (const pair of PAIRS) {
+    const ref = refBase.get(pair.id) ?? 0;
+    for (const dex of DEX_LIST) {
+      const key = `${pair.id}|${dex.id}`;
+      const buy = buyBest.get(key);
+      const sell = sellBest.get(key);
+      const price = sell && ref > 0 ? sell.out / ref : null;
+      quotes.push({
+        pairId: pair.id,
+        dex: dex.id,
+        price,
+        amountOut: sell ? sell.out.toString() : null,
+        buyOut: buy?.out ?? null,
+        buyFee: buy?.fee ?? 0,
+        sellOut: sell?.out ?? null,
+        sellFee: sell?.fee ?? 0,
+        refBase: ref,
+        loanSize: loanSizes.get(pair.id) ?? pair.loanSize,
+      });
+    }
+  }
 
   return {
     blockNumber: blockNumber.toString(),
