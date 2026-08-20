@@ -143,6 +143,12 @@ export interface Pair {
   quote: TokenSymbol;
   /** trade size in base units used for quoting */
   size: number;
+  /**
+   * Flash-loan size denominated in the quote token. The quote token is always
+   * an Aave V3 BSC reserve (USDT or WBNB), so this is the amount actually
+   * borrowed, swapped and repaid by the executor.
+   */
+  loanSize: number;
   /** PancakeSwap V2 pool watched over websocket for large swaps */
   watchPool: `0x${string}`;
   /** include in the whale-swap watch list (kept small to stay under RPC limits) */
@@ -176,6 +182,8 @@ function pair(
     base,
     quote,
     size,
+    // default loan notional per quote asset, scaled at runtime by the bot config
+    loanSize: quote === "WBNB" ? 3 : 2000,
     watchPool: pancakeV2Pool(base, quote),
     watch,
   };
