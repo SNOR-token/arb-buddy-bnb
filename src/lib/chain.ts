@@ -80,6 +80,13 @@ export interface Dex {
   router: `0x${string}`;
   /** V3 fee tier used for quoting */
   fee?: number;
+  /**
+   * Whether the deployed executor can actually swap through this router.
+   * The live BnbArbExecutor's V3 path reverts with empty returndata against the
+   * BSC SwapRouter02 (verified on mainnet), so V3 venues are quote-only: they
+   * stay on the price matrix but never form an executable arbitrage route.
+   */
+  executable: boolean;
 }
 
 export const DEXES: Record<DexId, Dex> = {
@@ -89,6 +96,7 @@ export const DEXES: Record<DexId, Dex> = {
     kind: "v2",
     quoter: "0x10ED43C718714eb63d5aA57B78B54704E256024E",
     router: "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+    executable: true,
   },
   uniswap: {
     id: "uniswap",
@@ -97,6 +105,7 @@ export const DEXES: Record<DexId, Dex> = {
     quoter: "0x78D78E420Da98ad378D7799bE8f4AF69033EB077",
     router: "0xB971eF87ede563556b2ED4b1C0b0019111Dd85d2",
     fee: 500,
+    executable: false,
   },
   sushi: {
     id: "sushi",
@@ -104,6 +113,7 @@ export const DEXES: Record<DexId, Dex> = {
     kind: "v2",
     quoter: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
     router: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
+    executable: true,
   },
   biswap: {
     id: "biswap",
@@ -111,6 +121,7 @@ export const DEXES: Record<DexId, Dex> = {
     kind: "v2",
     quoter: "0x3a6d8cA21D1CF76F653A67577FA0D27453350dD8",
     router: "0x3a6d8cA21D1CF76F653A67577FA0D27453350dD8",
+    executable: true,
   },
   apeswap: {
     id: "apeswap",
@@ -118,8 +129,11 @@ export const DEXES: Record<DexId, Dex> = {
     kind: "v2",
     quoter: "0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7",
     router: "0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7",
+    executable: true,
   },
 };
+
+export const EXECUTABLE_DEXES = Object.values(DEXES).filter((d) => d.executable);
 
 export const DEX_LIST = Object.values(DEXES);
 
