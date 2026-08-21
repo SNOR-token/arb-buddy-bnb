@@ -103,8 +103,11 @@ export function ExecutorPanel({ contract, address, onBsc }: Props) {
             <Row
               ok
               label="Aave pool"
-              value={`${status.pool.slice(0, 8)}…${status.pool.slice(-4)}`}
+              value={
+                status.pool ? `${status.pool.slice(0, 8)}…${status.pool.slice(-4)}` : "internal"
+              }
             />
+
             {(Object.keys(DEXES) as DexId[]).map((id) => (
               <div key={id} className="flex items-center justify-between gap-2">
                 <Row ok={status.routers[id]} label={DEXES[id].label} value="" />
