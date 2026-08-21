@@ -6,11 +6,24 @@ import {
   type Pair,
 } from "./chain";
 
+/**
+ * One venue's round-trip quote for a pair, produced by the server engine:
+ *  - `buyOut`  : base tokens received for spending `loanSize` quote tokens here
+ *  - `sellOut` : quote tokens received for selling `refBase` base tokens here
+ * Both legs are real router quotes, so DEX fees are already priced in.
+ */
 export interface Quote {
   pairId: string;
   dex: DexId;
+  /** display price: quote per 1 base, from the sell leg */
   price: number | null;
   amountOut: string | null;
+  buyOut: number | null;
+  buyFee: number;
+  sellOut: number | null;
+  sellFee: number;
+  refBase: number;
+  loanSize: number;
 }
 
 export interface Opportunity {
@@ -18,14 +31,20 @@ export interface Opportunity {
   pair: Pair;
   buyDex: DexId;
   sellDex: DexId;
+  /** V3 fee tiers for each leg (0 for V2 routers) */
+  buyFee: number;
+  sellFee: number;
   buyPrice: number;
   sellPrice: number;
   spreadPct: number;
-  /** notional of the flashloan leg, in quote token */
+  /** flash-loan notional in quote token — exactly what the tx borrows */
   notional: number;
+  /** base tokens bought on the cheap venue with the full notional */
+  baseBought: number;
+  /** quote tokens returned by selling `baseBought` on the rich venue */
+  quoteReturned: number;
   grossProfit: number;
   flashFee: number;
-  dexFees: number;
   gasCost: number;
   netProfit: number;
 }
@@ -37,9 +56,9 @@ export function bnbPrice(quotes: Quote[]) {
 }
 
 /**
- * Venues with no real depth for a pair still return a quote, but at an absurd
- * price. Drop any venue more than `tolerancePct` away from the pair median so
- * illiquid pools never masquerade as an arbitrage.
+ * Display-only cleanup: venues with no real depth still return a quote, but far
+ * below the deepest pool. Null those out so the price matrix does not show
+ * phantom prices. Opportunity math uses the raw round-trip quotes instead.
  */
 export function sanitizeQuotes(quotes: Quote[], tolerancePct = 1.2): Quote[] {
   return PAIRS.flatMap((pair) => {
@@ -49,25 +68,24 @@ export function sanitizeQuotes(quotes: Quote[], tolerancePct = 1.2): Quote[] {
       .filter((p): p is number => !!p && p > 0)
       .sort((a, b) => a - b);
     if (prices.length === 0) return rows;
-    // Best execution = highest output for the same input, so the deepest pool
-    // sets the reference. Anything far below it is an illiquid pool.
     const reference = prices[prices.length - 1]!;
     return rows.map((q) => {
       if (!q.price || q.price <= 0) return { ...q, price: null };
       const shortfall = ((reference - q.price) / reference) * 100;
-      return shortfall > tolerancePct ? { ...q, price: null, amountOut: null } : q;
+      return shortfall > tolerancePct ? { ...q, price: null } : q;
     });
   });
 }
 
-const DEX_FEE_BPS: Record<DexId, number> = {
-  pancake: 25,
-  uniswap: 5,
-  sushi: 30,
-  biswap: 10,
-  apeswap: 20,
-};
-
+/**
+ * Builds executable arbitrage routes from round-trip quotes.
+ *
+ * For each pair: borrow `loanSize` quote tokens, buy the base token on the
+ * venue with the best `buyOut`, sell it on the venue with the best sell rate,
+ * repay the loan plus the Aave premium. Only venues the deployed executor can
+ * actually route through are considered, and only routes whose net profit is
+ * positive are returned — everything else reverts on chain.
+ */
 export function computeOpportunities(
   quotes: Quote[],
   gasPriceGwei: number,
@@ -77,45 +95,61 @@ export function computeOpportunities(
   const out: Opportunity[] = [];
 
   for (const pair of PAIRS) {
-    const valid = quotes.filter((q) => q.pairId === pair.id && q.price && q.price > 0);
-    if (valid.length < 2) continue;
+    const rows = quotes.filter(
+      (q) => q.pairId === pair.id && DEXES[q.dex].executable && q.refBase > 0,
+    );
+    const buys = rows.filter((q) => (q.buyOut ?? 0) > 0);
+    const sells = rows.filter((q) => (q.sellOut ?? 0) > 0);
+    if (!buys.length || !sells.length) continue;
 
-    const sorted = [...valid].sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
-    const cheapest = sorted[0]!;
-    const richest = sorted[sorted.length - 1]!;
-    const buyPrice = cheapest.price!;
-    const sellPrice = richest.price!;
-    if (buyPrice <= 0) continue;
+    const buy = buys.reduce((best, q) => ((q.buyOut ?? 0) > (best.buyOut ?? 0) ? q : best));
+    // the sell venue must differ from the buy venue
+    const sellCandidates = sells.filter((q) => q.dex !== buy.dex);
+    if (!sellCandidates.length) continue;
+    const sell = sellCandidates.reduce((best, q) =>
+      (q.sellOut ?? 0) > (best.sellOut ?? 0) ? q : best,
+    );
 
-    const spreadPct = ((sellPrice - buyPrice) / buyPrice) * 100;
-    const notional = pair.size * buyPrice; // quote-token notional of one loop
-    const grossProfit = (sellPrice - buyPrice) * pair.size;
+    const notional = buy.loanSize;
+    const baseBought = buy.buyOut!;
+    // sell leg was quoted at refBase; scale linearly to the amount we hold
+    const sellRate = sell.sellOut! / sell.refBase;
+    const quoteReturned = baseBought * sellRate;
+
+    const grossProfit = quoteReturned - notional;
     const flashFee = (notional * AAVE_FLASHLOAN_PREMIUM_BPS) / 10_000;
-    const dexFees =
-      (notional * (DEX_FEE_BPS[cheapest.dex] + DEX_FEE_BPS[richest.dex])) / 10_000;
-
-    // gas in BNB -> quote token. Pairs quoted in WBNB already price in BNB.
     const gasBnb = (gasPriceGwei * gasUnits) / 1e9;
     const gasCost = pair.quote === "WBNB" ? gasBnb : gasBnb * bnb;
+
+    const buyPrice = notional / baseBought;
+    const sellPrice = sellRate;
 
     out.push({
       pairId: pair.id,
       pair,
-      buyDex: cheapest.dex,
-      sellDex: richest.dex,
+      buyDex: buy.dex,
+      sellDex: sell.dex,
+      buyFee: buy.buyFee,
+      sellFee: sell.sellFee,
       buyPrice,
       sellPrice,
-      spreadPct,
+      spreadPct: buyPrice > 0 ? ((sellPrice - buyPrice) / buyPrice) * 100 : 0,
       notional,
+      baseBought,
+      quoteReturned,
       grossProfit,
       flashFee,
-      dexFees,
       gasCost,
-      netProfit: grossProfit - flashFee - dexFees - gasCost,
+      netProfit: grossProfit - flashFee - gasCost,
     });
   }
 
   return out.sort((a, b) => b.netProfit - a.netProfit);
+}
+
+/** Only routes that clear every cost — the terminal never lists the rest. */
+export function profitableOnly(ops: Opportunity[], floor = 0) {
+  return ops.filter((o) => o.netProfit > floor);
 }
 
 export function routerFor(dex: DexId) {
