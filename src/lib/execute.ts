@@ -234,7 +234,8 @@ async function read<T>(
 export interface ExecutorStatus {
   owner: `0x${string}`;
   paused: boolean;
-  pool: `0x${string}`;
+  /** null when this deployment does not expose BNB_POOL */
+  pool: `0x${string}` | null;
   routers: Record<DexId, boolean>;
   isOwner: boolean;
   ready: boolean;
@@ -252,8 +253,10 @@ export async function readExecutorStatus(
   const [owner, paused, pool] = await Promise.all([
     read<`0x${string}`>(provider, contract, "owner"),
     read<boolean>(provider, contract, "paused"),
-    read<`0x${string}`>(provider, contract, "BNB_POOL"),
+    // optional: some deployments do not expose BNB_POOL
+    read<`0x${string}`>(provider, contract, "BNB_POOL").catch(() => null),
   ]);
+
 
   const ids = Object.keys(DEXES) as DexId[];
   const flags = await Promise.all(
