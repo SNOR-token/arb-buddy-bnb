@@ -45,24 +45,75 @@ export const Route = createFileRoute("/")({
 function Dashboard() {
   const { settings, update } = useBotSettings();
   const [executing, setExecuting] = useState<string | null>(null);
+  const [simulating, setSimulating] = useState<string | null>(null);
+  const [sims, setSims] = useState<Record<string, SimResult>>({});
+  const [dismissed, setDismissed] = useState<Record<string, number>>({});
   const { address, onBsc, available, ensureBsc } = useWallet();
   const { trades, addTrade, clear, realized, winRate } = useTrades();
   const lastAuto = useRef(0);
 
   const snapshot = useQuery({
-    queryKey: ["quotes"],
+    queryKey: ["quotes", settings.loanAmount],
     queryFn: () => getQuotes(),
     refetchInterval: 6_000,
   });
 
-  const quotes = useMemo(
+  const displayQuotes = useMemo(
     () => sanitizeQuotes(snapshot.data?.quotes ?? []),
     [snapshot.data?.quotes],
   );
-  const opportunities = useMemo(
-    () => computeOpportunities(quotes, snapshot.data?.gasPriceGwei ?? 1),
-    [quotes, snapshot.data?.gasPriceGwei],
-  );
+
+  const opportunities = useMemo(() => {
+    const raw = computeOpportunities(
+      snapshot.data?.quotes ?? [],
+      snapshot.data?.gasPriceGwei ?? 1,
+    );
+    // Only routes that clear every cost are ever shown or fired — anything else
+    // reverts on chain with InsufficientProfit.
+    const now = Date.now();
+    return profitableOnly(raw).filter((op) => {
+      const until = dismissed[op.pairId];
+      return !until || until < now;
+    });
+  }, [snapshot.data, dismissed]);
+
+  const dismiss = (pairId: string) => {
+    // hide the route for 10 minutes
+    setDismissed((prev) => ({ ...prev, [pairId]: Date.now() + 10 * 60_000 }));
+  };
+
+  const simulate = async (op: Opportunity) => {
+    if (!available) {
+      toast.info("No wallet detected", {
+        description: "Install MetaMask or Trust Wallet to dry-run against BNB Chain.",
+      });
+      return;
+    }
+    setSimulating(op.pairId);
+    try {
+      const { provider } = await ensureBsc();
+      const result = await simulateFlashArb({
+        provider,
+        contract: settings.contract as `0x${string}`,
+        opportunity: op,
+        loanAmount: op.notional,
+        minProfit: 0,
+      });
+      setSims((prev) => ({
+        ...prev,
+        [op.pairId]: result.ok
+          ? { ok: true, message: "Simulation succeeded — atomic route is valid at this block" }
+          : { ok: false, message: result.reason },
+      }));
+      if (result.ok) toast.success(`Simulation passed for ${op.pairId}`);
+      else toast.warning(`Simulation reverted for ${op.pairId}`, { description: result.reason.slice(0, 180) });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Simulation failed";
+      setSims((prev) => ({ ...prev, [op.pairId]: { ok: false, message: message.slice(0, 180) } }));
+    } finally {
+      setSimulating(null);
+    }
+  };
 
   const runArb = async (op: Opportunity, mode: "auto" | "manual") => {
     const quoteSymbol = op.pair.quote;
@@ -97,14 +148,15 @@ function Dashboard() {
         from: account,
         contract: settings.contract as `0x${string}`,
         opportunity: op,
-        loanAmount: settings.loanAmount,
+        // borrow exactly the notional the route was quoted at
+        loanAmount: op.notional,
         minProfit: 0,
       });
       addTrade({
         pairId: op.pairId,
         buyDex: op.buyDex,
         sellDex: op.sellDex,
-        notional: settings.loanAmount,
+        notional: op.notional,
         netProfit: op.netProfit,
         mode: "live",
         txHash,
@@ -126,16 +178,17 @@ function Dashboard() {
   };
 
 
-  // Auto-fire: whenever the top opportunity clears the profit floor.
+  // Auto-fire: whenever a profitable route appears.
   useEffect(() => {
     if (!settings.autoMode) return;
     const best = opportunities[0];
-    if (!best || best.netProfit < settings.minProfit) return;
+    if (!best) return;
     if (Date.now() - lastAuto.current < 20_000) return;
     lastAuto.current = Date.now();
     void runArb(best, "auto");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opportunities, settings.autoMode, settings.minProfit]);
+  }, [opportunities, settings.autoMode]);
+
 
   const block = snapshot.data?.blockNumber ?? "0";
   const gas = snapshot.data?.gasPriceGwei ?? 0;
