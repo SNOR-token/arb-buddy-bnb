@@ -80,7 +80,9 @@ export const SWAP_EVENT_ABI = [
   },
 ] as const;
 
-export type { Quote } from "./arb-math";
+import type { Quote } from "./arb-math";
+export type { Quote };
+
 
 
 export interface QuoteSnapshot {
