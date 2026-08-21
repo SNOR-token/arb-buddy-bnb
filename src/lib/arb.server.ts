@@ -80,25 +80,8 @@ export const SWAP_EVENT_ABI = [
   },
 ] as const;
 
-export interface Quote {
-  pairId: string;
-  dex: DexId;
-  /** quote token per base token, from the sell leg (display price) */
-  price: number | null;
-  amountOut: string | null;
-  /** base tokens received when spending `loanSize` quote tokens on this venue */
-  buyOut: number | null;
-  /** V3 fee tier that produced `buyOut` (0 for V2 routers) */
-  buyFee: number;
-  /** quote tokens received when selling `refBase` base tokens on this venue */
-  sellOut: number | null;
-  /** V3 fee tier that produced `sellOut` (0 for V2 routers) */
-  sellFee: number;
-  /** base amount used as the reference input for the sell leg */
-  refBase: number;
-  /** flash-loan notional in quote token used for this snapshot */
-  loanSize: number;
-}
+export type { Quote } from "./arb-math";
+
 
 export interface QuoteSnapshot {
   blockNumber: string;
