@@ -37,6 +37,7 @@ function leg(
   dex: DexId,
   tokenIn: `0x${string}`,
   tokenOut: `0x${string}`,
+  poolFee = 0,
 ): SwapLeg {
   const venue = DEXES[dex];
   return {
@@ -45,11 +46,68 @@ function leg(
     tokenIn,
     tokenOut,
     // uint24 pool fee is only meaningful for V3 routers
-    poolFee: venue.kind === "v3" ? (venue.fee ?? 500) : 0,
+    poolFee: venue.kind === "v3" ? (poolFee || venue.fee || 500) : 0,
     // profit is enforced atomically by minimumProfit at the end of the loop
     amountOutMinimum: 0n,
     sqrtPriceLimitX96: 0n,
   };
+}
+
+/** Builds the exact calldata the executor expects for this opportunity. */
+export function buildArbCalldata(
+  opportunity: Opportunity,
+  loanAmount: number,
+  minProfit = 0,
+  deadlineSeconds = 120,
+) {
+  const pair: Pair = opportunity.pair;
+  const asset = TOKENS[pair.quote];
+  const intermediate = TOKENS[pair.base];
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + deadlineSeconds);
+
+  const data = encodeFunctionData({
+    abi: FLASH_ARB_ABI,
+    functionName: "executeArbitrage",
+    args: [
+      asset.address,
+      parseUnits(loanAmount.toFixed(asset.decimals), asset.decimals),
+      leg(opportunity.buyDex, asset.address, intermediate.address, opportunity.buyFee),
+      leg(opportunity.sellDex, intermediate.address, asset.address, opportunity.sellFee),
+      parseUnits(Math.max(minProfit, 0).toFixed(asset.decimals), asset.decimals),
+      deadline,
+    ],
+  });
+
+  return { data, asset };
+}
+
+/**
+ * Dry-runs executeArbitrage with eth_call. The executor is owner-gated, so the
+ * call is made *from* the on-chain owner: a green result means the atomic route
+ * (borrow -> buy -> sell -> repay) clears every cost at the current block.
+ */
+export async function simulateFlashArb({
+  provider,
+  contract,
+  opportunity,
+  loanAmount,
+  minProfit = 0,
+}: Omit<ExecuteArgs, "from" | "provider"> & { provider: Eip1193Provider }) {
+  const { data, asset } = buildArbCalldata(opportunity, loanAmount, minProfit);
+  const owner = await read<`0x${string}`>(provider, contract, "owner");
+  try {
+    const result = (await provider.request({
+      method: "eth_call",
+      params: [{ from: owner, to: contract, data }, "latest"],
+    })) as `0x${string}`;
+    return { ok: true as const, requestHash: result, owner };
+  } catch (error) {
+    return {
+      ok: false as const,
+      owner,
+      reason: describeRevert(error, asset.decimals, opportunity.pair.quote),
+    };
+  }
 }
 
 /**
@@ -65,24 +123,12 @@ export async function executeFlashArb({
   minProfit,
   deadlineSeconds = 120,
 }: ExecuteArgs) {
-  const pair: Pair = opportunity.pair;
-  const asset = TOKENS[pair.quote];
-  const intermediate = TOKENS[pair.base];
-
-  const deadline = BigInt(Math.floor(Date.now() / 1000) + deadlineSeconds);
-
-  const data = encodeFunctionData({
-    abi: FLASH_ARB_ABI,
-    functionName: "executeArbitrage",
-    args: [
-      asset.address,
-      parseUnits(loanAmount.toString(), asset.decimals),
-      leg(opportunity.buyDex, asset.address, intermediate.address),
-      leg(opportunity.sellDex, intermediate.address, asset.address),
-      parseUnits(minProfit.toString(), asset.decimals),
-      deadline,
-    ],
-  });
+  const { data, asset } = buildArbCalldata(
+    opportunity,
+    loanAmount,
+    minProfit,
+    deadlineSeconds,
+  );
 
   // Simulate first so reverts surface as readable custom errors instead of a
   // wallet-level "transaction may fail" warning after the user has signed.
@@ -94,7 +140,7 @@ export async function executeFlashArb({
     })) as `0x${string}`;
     gas = (BigInt(estimate) * 125n) / 100n;
   } catch (error) {
-    throw new Error(describeRevert(error, asset.decimals, pair.quote));
+    throw new Error(describeRevert(error, asset.decimals, opportunity.pair.quote));
   }
 
   const txHash = (await provider.request({
@@ -104,6 +150,7 @@ export async function executeFlashArb({
 
   return txHash;
 }
+
 
 /** Turns an RPC revert payload into a human sentence using the executor ABI. */
 export function describeRevert(error: unknown, decimals: number, symbol: string): string {
